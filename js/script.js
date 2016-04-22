@@ -1,7 +1,12 @@
 //TODO
 //fix instr range
-//fix seed
+//fix snare
 
+//SEEDS
+//60-4-32-0-43.13090
+//90-2-32-0-98.39791
+//60-4-32-0-86.57302
+//60-4-32-0-98.95139
 
 // Parameters
 var tempo = 60.0;
@@ -9,10 +14,14 @@ var baseResolution = 4;
 var durationFactor = 4;
 var baseLength = 16;
 var baseOscNumber = 10;
-var chordProba = 0.2;
-var chaos = 0;
+var chordProba = 0;
+
 var maxDurationShort = 16;
 var baseDetune = 1
+var seedPrecision = 5;
+
+var compressorThreshold = -24
+var compressorRatio = 20
 
 //oscilloscope
 var oscWidth = 1000;
@@ -31,6 +40,8 @@ var commandList = [];
 var noteDurations = [];
 var cursor = 0;
 var max = 1;
+var chaos = 0;
+var sqrChaos = 0;
 var play = true;
 var resolution;
 var context;
@@ -48,55 +59,79 @@ $(document).ready(function(){
   scope = new Oscilloscope(context, canvas[0]);
   scope.start()
   generationSeed = Math.random()*100
+  generationSeed = generationSeed.toFixed(seedPrecision)
+
+  var ch = $('#chaos')[0]
+  ch.addEventListener("input", function() {
+      $('#chaosResult').html(ch.value)
+  }, false); 
 })
 
 
 // Entry point. Get random seed and generate song
 function generateSong(){
+  getParams()
   seed = generationSeed
-  $('#seed').html(seed)
+  $('#seed').html(generateSeed(seed))
   resetAndGenerate()
 }
 
 //Resets everything and generates new song
 function resetAndGenerate(){
   reset()
-  getParams()
+  
   generateDurations();
-
   randomSong()
 
+  //computes the nb of steps necessary to loop
   for(var i = 0;i<commandList.length;i++){
     max = lcm(max,commandList[i].sequence.length)
   }
 
   setInterval(scheduler, 100);
   generationSeed = Math.random()*100
+  generationSeed = generationSeed.toFixed(seedPrecision)
   play = true;
 }
 
 //Reads inputs on html and set params
 function getParams(){
    baseLength = parseInt($('#length').val())
-   var ch = parseFloat($('#chaos').val()/100)
-   chaos =  ch*ch*ch
+   baseResolution = parseInt($('#resolution').val())
+   tempo = parseInt($('#tempo').val())
+   chaos = parseFloat($('#chaos').val()/100)
+   //use squared value for calculationsfor slower increase
+   sqrChaos = chaos*chaos
+}
+
+//Concatenates all needed params for the seed
+function generateSeed(){
+  return tempo + '-' + baseResolution + '-' + baseLength + '-' + chaos*100 + '-' + seed;
 }
 
 //Reads the seed value input and generates a song according to it
 function loadSeed(){
-  seed = parseFloat($('#seedInput').val())
-  $('#seed').html(seed)
+  var input = $('#seedInput').val()
+  var s =input.split(/-/g)
+  tempo = parseInt(s[0])
+  $('#tempo').val(tempo)
+  baseResolution = parseInt(s[1])
+  $('#resolution').val(baseResolution)
+  baseLength = parseInt(s[2])
+  $('#length').val(baseLength)
+  chaos = parseFloat(s[3]/100)
+  $('#chaos').val(chaos*100)
+  $('#chaosResult').html(chaos*100)
+  seed = parseFloat(s[4])
+  $('#seed').html(generateSeed())
   resetAndGenerate()
 }
 
 //Kill current song and reset params
 function reset(){
-  resolution = baseResolution
- 
-  
-  
   clearInterval(schedulerTimer);
-  
+
+  resolution = baseResolution
   cursor = 0
   nextNoteTime = 0.0
   max = 1
@@ -104,7 +139,9 @@ function reset(){
   for(var i = 0;i<commandList.length;i++){
     commandList[i].kill()
   }
+
   commandList = []
+
   resetContext()
   initOsc()
 }
@@ -118,14 +155,14 @@ function resetContext(){
   mixNode.gain.value = 1;
 
   compressor = context.createDynamicsCompressor()
-  compressor.threshold.value = -24;
-  compressor.reduction.value = -200
+  compressor.threshold.value = compressorThreshold;
+  compressor.reduction.value = compressorRatio
   compressor.attack.value = 0;
 
   mixNode.connect(compressor);
   compressor.connect(context.destination);  
 }
-
+//what it says
 function initCanvas(){
   context = new AudioContext
   canvas = $('<canvas width="' + oscWidth + '" height="' + oscHeight + '"></canvas>');
@@ -134,7 +171,7 @@ function initCanvas(){
         G_vmlCanvasManager.initElement(canvas[0]);
 }
 
-//Create osc instance and connect to song
+//Create oscilloscope instance and connect to song
 function initOsc(){
   if(!scope){
     initCanvas()
@@ -178,9 +215,10 @@ function generateMetronome(){
 //generate 3 random commands as well as random drums, and add all to the commandList
 function randomSong(){
   resolution = baseResolution
-  resolution += Math.round(getRandomFloat(0,(chaos*chaos)*resolution))
-  //console.log(resolution)
-  //generateMetronome()
+  //if chaos>0, chance to slightly change resolution 
+  resolution += Math.round(getRandomFloat(0,(sqrChaos*sqrChaos)*resolution))
+
+  //Choose the root note and scale(will be the same for all sequences)
   root = pickRandomProperty(rootNotes)
   var scale = randomScale(root)
 
@@ -209,8 +247,8 @@ function randomSong(){
 //Display characteristics of the random song and add a mute command
 function displayParams(){
   $('#instruments').empty()
-  $('#instruments').append('Root : ' +  root + '</br>')
-  $('#instruments').append('Scale/Mode : ' +  mode + '</br>')
+  $('#instruments').append('<b>Root : </b>' +  root + '</br>')
+  $('#instruments').append('<b>Scale/Mode : </b>' +  mode + '</br></br>')
   commandList.forEach(function(c){
     $('#instruments').append(c.display())
     $('#' + c.name + '').click(function(){
@@ -235,7 +273,7 @@ function nextNote(){
   nextNoteTime +=secondsPerBeat/resolution;
   var c = Math.floor(cursor/resolution +1)
   cursor++;
-  $('#step').html(c + '/' + max/resolution)
+  $('#step').html('<b>Steps : </b>' + c + '/' + max/resolution)
     if (cursor == max) {
         cursor = 0;
     }
@@ -251,7 +289,7 @@ function scheduler(){
     nextNote()
   }
 }
-//...
+//Yep
 function pause(){
   play = !play
 }
@@ -267,11 +305,14 @@ function Command(instrument, sequence, name){
 Command.prototype.play = function(c){
   if(this.muted)
     return
+  //need to learn closures
   var self = this
   while(c >= this.sequence.length)
     c -= this.sequence.length
+  //sequence = '-' means no note at that position
   if(this.sequence[c] != '-' ){
       this.sequence[c].forEach(function(n){
+        //duration can be a nb in ms or a string ('16th', 'half', ...)
         var dur = typeof(n.duration) == 'number'? n.duration : noteDurations[n.duration]*60.0/tempo
         self.instrument.play(n.note, nextNoteTime, dur)
       })  
@@ -284,7 +325,7 @@ Command.prototype.kill = function(){
 }
 
 Command.prototype.display = function(){
-  var mute = '<input id=' + this.name + ' type=checkbox checked>'
+  var mute = '<input id=' + this.name + ' type=checkbox checked> '
   var length = ' - Length : ' + this.sequence.length / resolution
   var filter = ' - Filter : ' + this.instrument.filter.type + ':' + this.instrument.filter.frequency.value
   return mute + this.name + length  + '</br>'
@@ -293,14 +334,16 @@ Command.prototype.display = function(){
 
 //Generates sequence of notes based on random params
 function randomSequence(scale,baseLength,short){
-  var length = Math.max(getRandomLength(baseLength,short) + Math.floor(chaos*getRandomInt(1,baseLength*2)),1)
-  //var length = baseLength
-  //length = getRandomLength(baseLength,short)
+  var length = Math.max(getRandomLength(baseLength,short) + Math.floor(sqrChaos*getRandomInt(-baseLength/2,baseLength*2)),1)
 
+  //nb notes in the sequence. 1 = 1 note per step, 0 = no notes
   var density = getRandomFloat(0.1,1)
-  var coherence = getRandomFloat(0,1)
+  //chance to go from one note to a neighbouring note
+  var coherence = getRandomFloat(0.1,1)
+  //should the notes be rather long(-1) or short(1)
   var durationSkew = getRandomFloat(-1,1)
-  var chord = rand()<chord? true : false
+  //De we have single notes or 3-notes chords
+  var chord = rand()<chordProba+sqrChaos/4? true : false
   return generateSequence(scale,length,density,coherence,durationSkew,chord)
 }
 //Returns a random fraction of the baseLength
@@ -316,22 +359,29 @@ function getRandomLength(baseLength,short){
   if(short)
     length = Math.min(length,maxDurationShort)
   
+  length = Math.min(length,baseLength)
   return length
   //return getRandomInt(1,baseLength)
 }
 //Returns a sequence of notes/durations or silences based on a lot of weird assumptions
 function generateSequence(scale,length,density,coherence,durationSkew,chord){
   var seq = []
+
   var steps = length*resolution
   var lastNotePlayed = scale[0]
+  //Initialize the sequence with all empty steps
   for(var i = 0;i<steps;i++){
     seq[i] = '-'
   }
+
   for(var i = 0;i<steps;i++){
+    //density check. Should we play a note at this step?
     if(rand()<density){
       seq[i] = []
       // duration in number of steps
+      // duration factor codes for the max duration of a note
       var duration = pickRandomArray(skewDuration(durationSkew))*resolution*durationFactor
+      //lazy check
       if (duration<1)
         duration = 1
       // If the duration exeeds the total number of steps, only take the remaining steps
@@ -340,9 +390,11 @@ function generateSequence(scale,length,density,coherence,durationSkew,chord){
       var nbOfNotes = chord? getRandomInt(1,4) : 1
       for(var j = 0;j<nbOfNotes;j++){
         var note;
+        //coherence check. Should we chose a note based on the last note played?
         if(getRandomFloat(0,1)<coherence & i>1){
           note = getNeighbourNote(lastNotePlayed,scale)
         }
+        //If not, any note in the scale will do
         else{
           note = scale[pickRandomProperty(scale)]
         }
@@ -351,7 +403,7 @@ function generateSequence(scale,length,density,coherence,durationSkew,chord){
         seq[i].push(s)
         lastNotePlayed = note
       }
-      
+      //wait until the note is over before chosing a new one
       i+=duration-1
       // Haaaaaaaaaaa
       i = Math.floor(i)
@@ -366,6 +418,8 @@ function generateDurations(){
   for(var i = 1;i<=resolution*resolution;i++){
     //only keep power of 2 divisers
     if((i & (i - 1)) == 0){
+      // i/resolution is a completely arbitrary way of generating the duration distribution.
+      // nothing to see here
       for(var j = 0;j<i/resolution;j++){
         noteDurations.push(1/i)
       }
@@ -375,14 +429,15 @@ function generateDurations(){
 //Skew the duration distribution toward mostly long notes (-1) or mostly short (1)
 function skewDuration(skew){
   if(skew<-1 || skew >1){
+    //error handling like a pro
     console.log('skew must be between -1 and 1')
     return noteDurations
   }
-
   var l = noteDurations.length
   if(skew == 0){
     return noteDurations
   }
+  // Already dont remember whats happening here
   else if(skew<0){
     var s = Math.floor((-1-skew)*-l)+1
     return noteDurations.slice(0,s)
@@ -396,48 +451,54 @@ function skewDuration(skew){
 //Generates an instrument based on random params.
 //Trig is a text value (kick/snare/hihat) that tells the instrument to ignore normal playing mode
 function randomInstrument(trig){
-  var nbOsc = getRandomInt(1,baseOscNumber+0*baseOscNumber);
-  var distortion = getRandomFloat(0.0,chaos);
-  //distortion = 0
-  var peakLevel = getRandomFloat(0.04,0.06+chaos/5);
-  var sustainLevel = getRandomFloat(0.04,0.06+chaos/5);
-  var attack = getRandomFloat(0,1.5+chaos*3);
-  var decay = getRandomFloat(0,1.5+chaos*3);
-  var release = getRandomFloat(0,2+chaos*3);
+  var limit = false
+  // Arbitrary land
+  // Chose all the params of the random instr generation 
+  var nbOsc = getRandomInt(1,baseOscNumber+sqrChaos*baseOscNumber);
+  var distortion = getRandomFloat(0.0,sqrChaos/10);
+  var peakLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
+  var sustainLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
+  var attack = getRandomFloat(0,1.5+sqrChaos*3);
+  var decay = getRandomFloat(0,1.5+sqrChaos*3);
+  var release = getRandomFloat(0,2+sqrChaos*3);
 
   var filterType = getRandomFilter();
   var filterFreq = getRandomInt(200,10000);
-  if(filterType == 'highpass')
-    filterFreq = Math.min(filterFreq,5000)
-  //if(filterType == 'lowpass')
-  //  filterFreq = Math.min(filterFreq,3000)
-  var filterDetune = getRandomInt(-chaos*10,chaos*10);
-  var Q = getRandomFloat(0,1)*chaos;
-  var gain = getRandomFloat(0,1)*chaos;
+  //highpass has a tendency to lower the volume a lot. We will limit and level later
+  if(filterType == 'highpass'){
+    filterFreq = getRandomInt(200,4000)
+    limit = true;
+  }
+
+  var filterDetune = getRandomInt(-sqrChaos*10,sqrChaos*10);
+  var Q = getRandomFloat(0,1)*sqrChaos;
+  var gain = getRandomFloat(0,1)*sqrChaos;
 
   var noiseType = getRandomNoise();
   var noiseFilterType = getRandomFilter()
   var noiseFilterCutoff = getRandomInt(200,10000);
-  var noiseFilterVolume = getRandomFloat(0,1)*chaos;
+  var noiseFilterVolume = getRandomFloat(0,1)*sqrChaos;
 
   var instr = new Instrument({})
   instr.setDistortion(distortion)
   
   if(trig){
     instr.trig = trig
-    instr.kickRelease = getRandomFloat(0.1,2)+chaos*0.5
-    instr.snareRelease = getRandomFloat(0.1,0.5+chaos*0.5)
-    instr.hihatRelease = getRandomFloat(0.1,0.3+chaos*0.5)
+    instr.kickRelease = getRandomFloat(0.1,2)+sqrChaos*0.5
+    instr.snareRelease = getRandomFloat(0.1,0.5+sqrChaos*0.5)
+    instr.hihatRelease = getRandomFloat(0.1,0.3+sqrChaos*0.5)
     return instr
   }
 
   instr.setEnvelope(peakLevel,sustainLevel,attack,decay,release) 
   instr.setFilter(filterType,filterFreq,filterDetune,Q,gain) 
   instr.setNoises({type:noiseType,filterType:noiseFilterType,cutoff:noiseFilterCutoff,volume:noiseFilterVolume})
-
+  if(limit)
+    instr.createLimiter()
   for(var i = 0;i<nbOsc;i++){
     var wave = getRandomWave();
-    var detune = getRandomInt(-baseDetune - chaos*chaos*chaos*chaos*10,chaos*chaos*chaos*chaos*10 + baseDetune)
+    //beautiful
+    var detune = getRandomInt(-baseDetune - sqrChaos*sqrChaos*sqrChaos*sqrChaos*10,sqrChaos*sqrChaos*sqrChaos*sqrChaos*10 + baseDetune)
     instr.setOscillators({wave:wave,detune:detune})
   }
   
@@ -572,8 +633,6 @@ function getNeighbourNote(note,scale){
 
   return sc[newIndex]
 }
-
-
 
 
 

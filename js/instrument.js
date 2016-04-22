@@ -14,21 +14,24 @@ function Instrument(params){
 				releaseTime:1},
 
 	this.instrGainNode = this.context.createGain();
+	this.instrGainNode.gain.value = 0.85
 
 	this.filter = this.context.createBiquadFilter();
 	this.filter.type = 'lowpass'
 	this.filter.frequency.value = 20000
 
-
-	this.distortion = this.context.createWaveShaper();
+ 	this.distortion = this.context.createWaveShaper();
 
 	//hard coded pseudo limiter
 	this.compressor = this.context.createDynamicsCompressor()
-	this.compressor.threshold.value = -24;
-	this.compressor.reduction.value = -200
+	this.compressor.threshold.value = compressorThreshold;
+	this.compressor.reduction.value = compressorRatio
 	this.compressor.attack.value = 0;
 
-	//routing
+	//optional additional limiter
+	this.limiter = this.context.createDynamicsCompressor();
+
+	//routing: osc + noise -> filter -> compressor -> gain -> general mix
 	this.filter.connect(this.distortion)
 	this.distortion.connect(this.compressor)
 	this.compressor.connect(this.instrGainNode)
@@ -85,9 +88,9 @@ Instrument.prototype.setDistortion = function(amount){
 
   	this.distortion.curve = curve
 }
-
 //Chooses play mode depending on instrument type
 Instrument.prototype.play = function(freq,time,duration){
+	//new gain node for enveloppe
 	var gainNode = this.context.createGain();
 	gainNode.gain.value = 0;
 	gainNode.connect(this.filter);
@@ -136,6 +139,7 @@ Instrument.prototype.playNote = function(gainNode,freq,time,duration){
 		noise.start(time)
 	})
 
+	//If duration is too short, only use part of attack and 0 decay
 	var attack = duration>this.envelopeParams.attackTime? this.envelopeParams.attackTime : duration
 	var decay = duration>this.envelopeParams.attackTime? this.envelopeParams.decayTime : 0
 	var release = duration + this.envelopeParams.releaseTime;
@@ -158,8 +162,6 @@ Instrument.prototype.playNote = function(gainNode,freq,time,duration){
 	this.noises.forEach(function(n) {
 		n.stop(time + release);
 	});
-	
-    
 }
 //Synthetize a relatively shitty kick
 Instrument.prototype.playKick = function(gainNode,time){
@@ -169,7 +171,7 @@ Instrument.prototype.playKick = function(gainNode,time){
 	for(var i = 0;i<n;i++){
 		var osc = this.context.createOscillator();
 		osc.connect(gainNode);
-		osc.frequency.setValueAtTime(120+n*15, time);
+		osc.frequency.setValueAtTime(120+n*10, time);
 		osc.frequency.exponentialRampToValueAtTime(0.01, time + this.kickRelease);
 		osc.start(time);
 		osc.stop(time + this.kickRelease);
@@ -281,13 +283,25 @@ Instrument.prototype.createNoise = function(type,filterType,cutoff,volume,gainNo
 	filter.connect(gainNode)
 	return source
 }
+//Compresses and raises the gain by a fixed value
+Instrument.prototype.createLimiter = function(){
+	this.limiter.threshold.value = -24; 
+	this.limiter.knee.value = 0.0; 
+	this.limiter.ratio.value = 20.0;
+	this.limiter.attack.value = 0.005; 
+	this.limiter.release.value = 0.050; 
+	this.instrGainNode.gain.value+=0.15
 
-//bla bla bla. Stolen from somewhere
+	this.filter.connect(this.limiter)
+	this.limiter.connect(this.distortion)
+}
+
+//Stolen from somewhere
 createWhiteNoise = function(data,volume){
 	for (i = 0; i < data.length; i++) {
-        data[i] = (Math.random() - 0.5) * 2*volume;
-    }
-    return data
+		data[i] = (Math.random() - 0.5) * 2*volume;
+	}
+	return data
 }
 createPinkNoise = function(data,volume){
 	var b0, b1, b2, b3, b4, b5, b6;
@@ -317,7 +331,6 @@ createBrownianNoise = function(data,volume){
     return data
 }
 noiseBuffer = function(context) {
-
 	var bufferSize = context.sampleRate;
 	var buffer = context.createBuffer(1, bufferSize, context.sampleRate);
 	var output = buffer.getChannelData(0);
