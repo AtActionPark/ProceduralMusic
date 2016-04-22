@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>Test</title>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script  src="js/helpers.js"></script>
+    <script  src="js/instrument.js"></script>
+    <script  src="js/script.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="css/stylesheet.css">
+  </head>
+  <body>
+    <div id="wrapper">
+      <div id="sidebar-wrapper">
+          <!--<button onClick="pause()">Pause</button>-->
+          <p class="title">GENERATE</p>
+          <div id="params">
+            Base Length: <input id='length' value = '16' type=numberBox size="4" min=1 /></br>
+            Chaos<input id='chaos' type=range value=0 width="100px" min=0 max=100/></br>
+            <button id="generate" class="btn btn-default" onClick="generateSong()">Generate</button></br>
+          </div>
+          
+          <p class="title">SEED</p>
+          <div id="seedDiv">
+            Current seed: <div id="seed">-</div>
+            </br>
+            </br>
+            </br>
+            <input id='seedInput' type=numberBox size="16" min=1 /></br>
+            <button id="loadSeed" class="btn btn-default" onClick="loadSeed()">Load</button></br>
+          </div>
+      </div>
+      <div id="page-content-wrapper">
+          <div class="container-fluid">
+              <div class="row">
+                  <div class="col-lg-12">
+                    <div id='osc'></div>
+                    <!--<p>Stabilization sensitivity</p>
+                    <p>
+                      <input id='min' type=range min=1 max=100/>
+                      <label id='label' for=min></label>
+                    </p>-->
+                    <div id='step'></div>
+                    <div id='instruments'></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

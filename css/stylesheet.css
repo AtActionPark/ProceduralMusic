@@ -1,0 +1,75 @@
+/*!
+ * Start Bootstrap - Simple Sidebar HTML Template (http://startbootstrap.com)
+ * Code licensed under the Apache License v2.0.
+ * For details, see http://www.apache.org/licenses/LICENSE-2.0.
+ */
+
+/* Toggle Styles */
+
+input[type=range] {
+    width: 100px;
+    height:20px;
+}
+input[type=numberbox] {
+    color:black;
+}
+
+
+
+#wrapper {
+    padding-left: 250px;
+}
+
+#sidebar-wrapper {
+    z-index: 1000;
+    position: fixed;
+    left: 250px;
+    width: 250px;
+    height: 100%;
+    margin-left: -250px;
+    overflow-y: auto;
+    background: #000;
+    color:white;
+}
+
+
+#page-content-wrapper {
+    width: 100%;
+    position: relative;
+    padding: 20px;
+}
+
+.sidebar-nav {
+    position: absolute;
+    top: 0;
+    width: 250px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+
+#params{
+	margin: 20px;
+	border:1px solid white;
+	padding: 10px;
+}
+#generate{
+
+}
+
+#seedDiv{
+	margin: 20px;
+	border:1px solid white;
+	padding: 10px;
+}
+#loadSeed{
+	margin-top:10px;
+}
+.title{
+	font-weight: bold;
+	font-size: 20px;
+	margin-left:20px;
+	margin-bottom:-15px;
+	margin-top: 20px
+}
