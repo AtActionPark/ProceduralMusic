@@ -8,6 +8,7 @@
 //60-4-32-0-86.57302
 //60-4-32-0-98.95139
 //60-4-32-0-70.62566
+//60-4-32-0-22.61597
 
 // Parameters
 var tempo = 60.0;
@@ -114,16 +115,16 @@ function generateSeed(){
 function loadSeed(){
   var input = $('#seedInput').val()
   var s =input.split(/-/g)
-  tempo = parseInt(s[0])
+  tempo = parseInt(s[0]) || 60
   $('#tempo').val(tempo)
-  baseResolution = parseInt(s[1])
+  baseResolution = parseInt(s[1]) ||4
   $('#resolution').val(baseResolution)
-  baseLength = parseInt(s[2])
+  baseLength = parseInt(s[2]) || 32
   $('#length').val(baseLength)
-  chaos = parseFloat(s[3]/100)
+  chaos = parseFloat(s[3]/100) || 0
   $('#chaos').val(chaos*100)
   $('#chaosResult').html(chaos*100)
-  seed = parseFloat(s[4])
+  seed = parseFloat(s[4]) || 1
   $('#seed').html(generateSeed())
   resetAndGenerate()
 }
