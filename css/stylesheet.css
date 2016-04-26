@@ -7,15 +7,15 @@ input[type=numberbox] {
 }
 
 #wrapper {
-	padding-left: 250px;
+	padding-left: 300px;
 }
 #sidebar-wrapper {
     z-index: 1000;
     position: fixed;
-    left: 250px;
-    width: 250px;
+    left: 300px;
+    width: 300px;
     height: 100%;
-    margin-left: -250px;
+    margin-left: -300px;
     overflow-y: auto;
     background: #000;
     color:white;
@@ -25,27 +25,20 @@ input[type=numberbox] {
     position: relative;
     padding: 20px;
 }
-
 .sidebar-nav {
     position: absolute;
     top: 0;
-    width: 250px;
+    width: 300px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
-
-
-#params{
+#params ,#evolveDiv, #seedDiv{
 	margin: 20px;
 	border:1px solid white;
 	padding: 10px;
 }
-#seedDiv{
-	margin: 20px;
-	border:1px solid white;
-	padding: 10px;
-}
+
 #loadSeed{
 	margin-top:10px;
 }
@@ -62,6 +55,37 @@ footer{
 a:visited{
 	color:white;
 }
-#chaosResult{
+#chaosResult, #evolveRateResult{
 	display:inline;
+}
+.change{
+    font-size:12px;
+    height:30px;
+}
+input[type=checkbox] + label{
+    background: url("http://icons.iconarchive.com/icons/custom-icon-design/mono-general-4/16/sound-off-icon.png") no-repeat;
+    height: 16px;
+    width: 16px;
+    display:inline-block;
+    padding: 0 0 0 0px;
+    position:relative;
+    top:6px;
+}
+input[type=checkbox]:checked + label{
+    background: url("http://icons.iconarchive.com/icons/custom-icon-design/mono-general-4/16/sound-icon.png") no-repeat;
+    height: 16px;
+    width: 16px;
+    display:inline-block;
+    padding: 0 0 0 0px;
+    position:relative;
+    top:6px;
+}
+#summary{
+    width:200px;
+    display:inline-block;
+}
+#pauseDiv{
+    display:inline;
+    position:relative;
+    top:-20px;
 }

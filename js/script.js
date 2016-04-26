@@ -2,13 +2,17 @@
 //fix instr range
 //fix snare
 
-//SEEDS
-//60-4-32-0-43.13090
-//90-2-32-0-98.39791
-//60-4-32-0-86.57302
-//60-4-32-0-98.95139
-//60-4-32-0-70.62566
-//60-4-32-0-22.61597
+//EXAMPLE SEEDS
+//60-4-32-0-43.13090-0-0
+//90-2-32-0-98.39791-0-0
+//60-4-32-0-86.57302-0-0
+//60-4-32-0-98.95139-0-0
+//60-4-32-0-70.62566-0-0
+//60-4-32-0-22.61597-0-0
+//60-4-32-0-52.98625-0-0
+//60-4-32-0-25.39188-0-0
+//60-4-32-0-28.44209-4Q-2Bi
+
 
 // Parameters
 var tempo = 60.0;
@@ -19,7 +23,7 @@ var baseOscNumber = 10;
 var chordProba = 0;
 
 var maxDurationShort = 16;
-var baseDetune = 1
+var baseDetune = 1;
 var seedPrecision = 5;
 
 var compressorThreshold = -24
@@ -55,6 +59,26 @@ var seed;
 var mode;
 var root;
 
+//keep track of the number of changes to be able to redo them on load
+var changes = '000000000000';
+var seqChangesInstr1 = 0;
+var seqChangesInstr2 = 0;
+var seqChangesInstr3 = 0;
+var seqChangesKick = 0;
+var seqChangesSnare = 0;
+var seqChangesHihat = 0;
+var changesInstr = '000000000000';
+var instrChangesInstr1 = 0;
+var instrChangesInstr2 = 0;
+var instrChangesInstr3 = 0;
+
+var evolve = false;
+var evolveProba = 0.25;
+
+
+
+
+//INIT
 
 $(document).ready(function(){
   initCanvas()
@@ -67,104 +91,16 @@ $(document).ready(function(){
   ch.addEventListener("input", function() {
       $('#chaosResult').html(ch.value)
   }, false); 
+  $('#evolve').change(function(){
+    evolve = $(this).is(':checked')
+  })
+  var ev = $('#evolveRate')[0]
+  ev.addEventListener("input", function() {
+      $('#evolveRateResult').html(ev.value)
+      evolveProba = ev.value/100;
+  }, false); 
 })
-
-
-// Entry point. Get random seed and generate song
-function generateSong(){
-  getParams()
-  seed = generationSeed
-  $('#seed').html(generateSeed(seed))
-  resetAndGenerate()
-}
-
-//Resets everything and generates new song
-function resetAndGenerate(){
-  reset()
-  
-  generateDurations();
-  randomSong()
-
-  //computes the nb of steps necessary to loop
-  for(var i = 0;i<commandList.length;i++){
-    max = lcm(max,commandList[i].sequence.length)
-  }
-
-  setInterval(scheduler, 100);
-  generationSeed = Math.random()*100
-  generationSeed = generationSeed.toFixed(seedPrecision)
-  play = true;
-}
-
-//Reads inputs on html and set params
-function getParams(){
-   baseLength = parseInt($('#length').val())
-   baseResolution = parseInt($('#resolution').val())
-   tempo = parseInt($('#tempo').val())
-   chaos = parseFloat($('#chaos').val()/100)
-   //use squared value for calculationsfor slower increase
-   sqrChaos = chaos*chaos
-}
-
-//Concatenates all needed params for the seed
-function generateSeed(){
-  return tempo + '-' + baseResolution + '-' + baseLength + '-' + chaos*100 + '-' + seed;
-}
-
-//Reads the seed value input and generates a song according to it
-function loadSeed(){
-  var input = $('#seedInput').val()
-  var s =input.split(/-/g)
-  tempo = parseInt(s[0]) || 60
-  $('#tempo').val(tempo)
-  baseResolution = parseInt(s[1]) ||4
-  $('#resolution').val(baseResolution)
-  baseLength = parseInt(s[2]) || 32
-  $('#length').val(baseLength)
-  chaos = parseFloat(s[3]/100) || 0
-  $('#chaos').val(chaos*100)
-  $('#chaosResult').html(chaos*100)
-  seed = parseFloat(s[4]) || 1
-  $('#seed').html(generateSeed())
-  resetAndGenerate()
-}
-
-//Kill current song and reset params
-function reset(){
-  clearInterval(schedulerTimer);
-
-  resolution = baseResolution
-  cursor = 0
-  nextNoteTime = 0.0
-  max = 1
-
-  for(var i = 0;i<commandList.length;i++){
-    commandList[i].kill()
-  }
-
-  commandList = []
-
-  resetContext()
-  initOsc()
-}
-
-//Closes current context, opens new one and reconnect everything
-function resetContext(){
-  context.close()
-  context = new AudioContext
-
-  mixNode = context.createGain();
-  mixNode.gain.value = 1;
-
-  compressor = context.createDynamicsCompressor()
-  compressor.threshold.value = compressorThreshold;
-  compressor.reduction.value = compressorRatio
-  compressor.attack.value = 0;
-
-  mixNode.connect(compressor);
-  compressor.connect(context.destination);  
-}
-//what it says
+//Initialize canvas for drawing oscilloscope
 function initCanvas(){
   context = new AudioContext
   canvas = $('<canvas width="' + oscWidth + '" height="' + oscHeight + '"></canvas>');
@@ -172,7 +108,6 @@ function initCanvas(){
     if (typeof G_vmlCanvasManager !== 'undefined')
         G_vmlCanvasManager.initElement(canvas[0]);
 }
-
 //Create oscilloscope instance and connect to song
 function initOsc(){
   if(!scope){
@@ -195,76 +130,89 @@ function initOsc(){
   compressor.connect(scope.input);
   scope.start();
 }
+//Reads user inputs and set params
+function getParams(){
+   baseLength = parseInt($('#length').val())
+   baseResolution = parseInt($('#resolution').val())
+   tempo = parseInt($('#tempo').val())
+   chaos = parseFloat($('#chaos').val()/100)
+   //use squared value for calculationsfor slower increase
+   sqrChaos = chaos*chaos
+}
+// Entry point. Get random seed and generate song
+function generateSong(){
+  getParams()
+  generationSeed = Math.random()*100
+  generationSeed = generationSeed.toFixed(seedPrecision)
+  seed = generationSeed
+  resetAndGenerate()
+  $('#seed').html(generateSeed(seed))
+}
 
-//Create and add a metronome to the commandList
-function generateMetronome(){
-  var metronomeInstr = new Instrument({})
-  metronomeInstr.setOscillators({wave:'sine',detune:0})
-  metronomeInstr.setEnvelope(0.8,0.3,0.01,0.1,0.0)
-  var MetronomeSequence = []
-  for(var i = 0;i<baseLength*resolution;i++){
-    if(i == 0)
-      MetronomeSequence.push([{note:880, duration:0.005}])
-    else if(i%resolution == 0)
-      MetronomeSequence.push([{note:440, duration:0.005}])
-    else
-      MetronomeSequence.push([{note:220, duration:0.005}])
+
+
+//SEED
+
+//Concatenates all needed params for the seed
+function generateSeed(){
+  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + chaos*100 + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62)
+  return s;
+}
+//Reads the seed value input and generates a song according to it
+function loadSeed(){
+  var input = $('#seedInput').val()
+  var s =input.split(/-/g)
+  changes = (s[5]) || 0
+  changes = pad(convertBase(changes,62,10),12)
+  changesInstr = (s[6]) || 0
+  changesInstr = pad(convertBase(changesInstr,62,10),6)
+  tempo = parseInt(s[0]) || 60
+  $('#tempo').val(tempo)
+  baseResolution = parseInt(s[1]) ||4
+  $('#resolution').val(baseResolution)
+  baseLength = parseInt(s[2]) || 32
+  $('#length').val(baseLength)
+  chaos = parseFloat(s[3]/100) || 0
+  sqrChaos = chaos*chaos
+  $('#chaos').val(chaos*100)
+  $('#chaosResult').html(chaos*100)
+  seed = parseFloat(s[4]) || 1
+  generationSeed = seed
+  
+  var c = changes.split('')
+  seqChangesInstr1 = parseInt(c[0]+c[1]);
+  seqChangesInstr2 = parseInt(c[2]+c[3]);
+  seqChangesInstr3 = parseInt(c[4]+c[5]);
+  seqChangesKick = parseInt(c[6]+c[7]);
+  seqChangesSnare = parseInt(c[8]+c[9]);
+  seqChangesHihat = parseInt(c[10]+c[11]);
+
+  var c2 = changesInstr.split('')
+  instrChangesInstr1 = parseInt(c2[0]+c2[1]);
+  instrChangesInstr2 = parseInt(c2[2]+c2[3]);
+  instrChangesInstr3 = parseInt(c2[4]+c2[5]);
+  
+  
+  $('#seed').html(generateSeed())
+  
+  resetAndLoad()
+}
+//same than resetAndGenerate(), but does not reset the changes values
+function resetAndLoad(){
+  reset()
+  generateDurations();
+  randomSong()
+  applyChanges(changes,changesInstr)
+
+  //computes the nb of steps necessary to loop
+  for(var i = 0;i<commandList.length;i++){
+    max = lcm(max,commandList[i].sequence.length)
   }
-  var metronomeCommand = new Command(metronomeInstr,MetronomeSequence)
-  commandList.push(metronomeCommand)
+
+  setInterval(scheduler, 100);
+  
+  play = true;
 }
-
-//generate 3 random commands as well as random drums, and add all to the commandList
-function randomSong(){
-  resolution = baseResolution
-  //if chaos>0, chance to slightly change resolution 
-  resolution += Math.round(getRandomFloat(0,(sqrChaos*sqrChaos)*resolution))
-
-  //Choose the root note and scale(will be the same for all sequences)
-  root = pickRandomProperty(rootNotes)
-  var scale = randomScale(root)
-
-  var instr1 = randomInstrument()
-  var scale1 = extendScale(scale,4,6)
-  var sequence1 = randomSequence(scale1,baseLength)
-  var command1 = new Command(instr1,sequence1,'Instr1')
-  commandList.push(command1)
-
-  var instr2 = randomInstrument() 
-  var scale2 = extendScale(scale,3,5)
-  var sequence2 = randomSequence(scale2,baseLength)
-  var command2 = new Command(instr2,sequence2,'Instr2')
-  commandList.push(command2)
-
-  var instr3 = randomInstrument() 
-  var scale3 = extendScale(scale,2,3)
-  var sequence3 = randomSequence(scale3,baseLength)
-  var command3 = new Command(instr3,sequence3,'Instr3')
-  commandList.push(command3)
-
-  randomDrum(baseLength,commandList)
-  displayParams()
-}
-
-//Display characteristics of the random song and add a mute command
-function displayParams(){
-  $('#instruments').empty()
-  $('#instruments').append('<b>Root : </b>' +  root + '</br>')
-  $('#instruments').append('<b>Scale/Mode : </b>' +  mode + '</br></br>')
-  commandList.forEach(function(c){
-    $('#instruments').append(c.display())
-    $('#' + c.name + '').click(function(){
-      var self = $(this)
-      if(self.is(':checked')){
-        c.muted = false
-      }
-      else{
-        c.muted = true
-      }
-    })
-  })
-}
-
 
 
 //SCHEDULER
@@ -275,8 +223,9 @@ function nextNote(){
   nextNoteTime +=secondsPerBeat/resolution;
   var c = Math.floor(cursor/resolution +1)
   cursor++;
+
   $('#step').html('<b>Steps : </b>' + c + '/' + max/resolution)
-    if (cursor == max) {
+    if (cursor == max){
         cursor = 0;
     }
 }
@@ -287,24 +236,40 @@ function scheduler(){
   while(nextNoteTime < context.currentTime + scheduleAheadTime){
     commandList.forEach(function(c){
       c.play(cursor)
+      c.cPos++
     })
     nextNote()
   }
 }
-//Yep
+//
 function pause(){
   play = !play
+  $('#pause').html(play? 'pause':'play')
 }
 
+
+//COMMAND
+
 //Command: instrument + sequence of notes
-function Command(instrument, sequence, name){
+function Command(instrument, sequence, name, scale){
   this.instrument  = instrument;
   this.sequence = sequence;
   this.name = name;
   this.mute = false;
+  this.scale = scale;
+  this.cPos = 0;
 }
 //Play the note at the cursor position
 Command.prototype.play = function(c){
+  if(this.cPos>this.sequence.length){
+    this.cPos = 0
+    if(evolve){
+      if(getRandomFloat(0,1)<evolveProba){
+        console.log('evolve ' + this.name)
+        this.changeSequence(false)
+      }
+    }
+  }
   if(this.muted)
     return
   //need to learn closures
@@ -325,18 +290,207 @@ Command.prototype.kill = function(){
   this.instrument.kill()
   this.sequence = []
 }
-
+//Returns basic info/buttons for the sequence
 Command.prototype.display = function(){
-  var mute = '<input id=' + this.name + ' type=checkbox checked> '
-  var length = ' - Length : ' + this.sequence.length / resolution
+  var mute = '<input id=' + this.name + ' type=checkbox><label></label> '
+  var length = ' : ' + this.sequence.length / resolution + ' steps'
   var filter = ' - Filter : ' + this.instrument.filter.type + ':' + this.instrument.filter.frequency.value
-  return mute + this.name + length  + '</br>'
+  var changeSequence = '  <button id=' + this.name + 'ChangeSequence' + ' type=button class="change btn btn-default">Change Seq.</button>';
+  var changeInstrument = ''
+  if(this.name != 'Kick' && this.name != 'Snare' && this.name != 'Hihat' )
+    changeInstrument = '  <button id=' + this.name + 'ChangeInstrument' + ' type=button class="change btn btn-default">Change Instr.</button>';
+
+  return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute  + changeSequence + changeInstrument + '</br></div>'
+}
+//Randomize the command's sequence and updates the seed accordingly
+Command.prototype.changeSequence = function(updateSeed){
+  var length = Math.max(getRandomLength(baseLength) + Math.floor(sqrChaos*getRandomInt(-baseLength/2,baseLength*2)),1)
+  this.sequence = randomSequence(this.scale,length)
+  if(updateSeed)
+    change(this.name,'seq')
+  
+  displayParams()
+  $('#' + this.name + 'Div').fadeTo('slow', 0.5).fadeTo('slow', 1.0);
+  for(var i = 0;i<commandList.length;i++){
+    max = lcm(max,commandList[i].sequence.length)
+  }
+}
+//Randomize the command's instrument and updates the seed accordingly
+Command.prototype.changeInstrument = function(updateSeed){
+  this.instrument = randomInstrument()
+  if(updateSeed)
+    change(this.name,'instr')
+  displayParams()
+}
+//increment the change counter and updates the seed
+function change(name,type){
+  if(type == 'seq'){
+    if(name == 'Instr1')
+      seqChangesInstr1++;
+    else if(name == 'Instr2')
+      seqChangesInstr2++;
+    else if(name == 'Instr3')
+      seqChangesInstr3++;
+    else if(name == 'Kick')
+      seqChangesKick++;
+    else if(name == 'Snare')
+      seqChangesSnare++;
+    else if(name == 'Hihat')
+      seqChangesHihat++;
+  }
+  if(type == 'instr'){
+    if(name == 'Instr1')
+      instrChangesInstr1++;
+    else if(name == 'Instr2')
+      instrChangesInstr2++;
+    else if(name == 'Instr3')
+      instrChangesInstr3++;
+
+  }
+
+  changes = pad(seqChangesInstr1,2) + '' + pad(seqChangesInstr2,2)+ '' + pad(seqChangesInstr3,2)+ '' + pad(seqChangesKick,2)+ '' + pad(seqChangesSnare,2)+ '' + pad(seqChangesHihat,2)
+  changesInstr = pad(instrChangesInstr1,2) + '' + pad(instrChangesInstr2,2)+ '' + pad(instrChangesInstr3,2)
+
+  $('#seed').html(generateSeed())
+}
+//On load, apply the right number of changes
+function applyChanges(changes,changesInstr){
+  var c = changes.split('')
+  var seq1Changes = parseInt(c[0]+c[1])
+  var seq2Changes = parseInt(c[2]+c[3])
+  var seq3Changes = parseInt(c[4]+c[5])
+  var seq4Changes = parseInt(c[6]+c[7])
+  var seq5Changes = parseInt(c[8]+c[9])
+  var seq6Changes = parseInt(c[10]+c[11])
+
+  for(var i = 0;i<seq1Changes;i++){
+    commandList[0].changeSequence(false)
+  }
+  for(var i = 0;i<seq2Changes;i++){
+    commandList[1].changeSequence(false)
+  }
+  for(var i = 0;i<seq3Changes;i++){
+    commandList[2].changeSequence(false)
+  }
+  for(var i = 0;i<seq4Changes;i++){
+    commandList[3].changeSequence(false)
+  }
+  for(var i = 0;i<seq5Changes;i++){
+    commandList[4].changeSequence(false)
+  }
+  for(var i = 0;i<seq6Changes;i++){
+    commandList[5].changeSequence(false)
+  }
+
+  var c2 = changesInstr.split('')
+  var instr1Changes = parseInt(c2[0]+c2[1])
+  var instr2Changes = parseInt(c2[2]+c2[3])
+  var instr3Changes = parseInt(c2[4]+c2[5])
+ 
+
+  for(var i = 0;i<instr1Changes;i++){
+    commandList[0].changeInstrument(false)
+  }
+  for(var i = 0;i<instr2Changes;i++){
+    commandList[1].changeInstrument(false)
+  }
+  for(var i = 0;i<instr3Changes;i++){
+    commandList[2].changeInstrument(false)
+  }
 }
 
+//PROCEDURAL GENERATION
 
+//generate 3 random commands as well as random drums, and add all to the commandList
+function randomSong(){
+  resolution = baseResolution
+  //if chaos>0, chance to slightly change resolution 
+  resolution += Math.round(getRandomFloat(0,(sqrChaos*sqrChaos)*resolution))
+
+  //Choose the root note and scale(will be the same for all sequences)
+  root = pickRandomProperty(rootNotes)
+  var scale = randomScale(root)
+
+  var instr1 = randomInstrument()
+  var scale1 = extendScale(scale,4,6)
+  var sequence1 = randomSequence(scale1,baseLength)
+  var command1 = new Command(instr1,sequence1,'Instr1',scale1)
+  commandList.push(command1)
+
+  var instr2 = randomInstrument() 
+  var scale2 = extendScale(scale,3,5)
+  var sequence2 = randomSequence(scale2,baseLength)
+  var command2 = new Command(instr2,sequence2,'Instr2',scale2)
+  commandList.push(command2)
+
+  var instr3 = randomInstrument() 
+  var scale3 = extendScale(scale,2,3)
+  var sequence3 = randomSequence(scale3,baseLength)
+  var command3 = new Command(instr3,sequence3,'Instr3',scale3)
+  commandList.push(command3)
+
+  randomDrum(baseLength,commandList)
+  displayParams()
+}
+//Generates an instrument based on random params.
+//Trig is a text value (kick/snare/hihat) that tells the instrument to ignore normal playing mode
+function randomInstrument(trig){
+  var limit = false
+  // Arbitrary land
+  // Chose all the params of the random instr generation 
+  var nbOsc = getRandomInt(1,baseOscNumber+sqrChaos*baseOscNumber);
+  var distortion = getRandomFloat(0.0,sqrChaos/10);
+  var peakLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
+  var sustainLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
+  var attack = getRandomFloat(0,1.5+sqrChaos*3);
+  var decay = getRandomFloat(0,1.5+sqrChaos*3);
+  var release = getRandomFloat(0,2+sqrChaos*3);
+
+  var filterType = getRandomFilter();
+  var filterFreq = getRandomInt(200,10000);
+  //highpass has a tendency to lower the volume a lot. We will limit and level later
+  if(filterType == 'highpass'){
+    filterFreq = getRandomInt(200,4000)
+    limit = true;
+  }
+
+  var filterDetune = getRandomInt(-sqrChaos*10,sqrChaos*10);
+  var Q = getRandomFloat(0,1)*sqrChaos;
+  var gain = getRandomFloat(0,1)*sqrChaos;
+
+  var noiseType = getRandomNoise();
+  var noiseFilterType = getRandomFilter()
+  var noiseFilterCutoff = getRandomInt(200,10000);
+  var noiseFilterVolume = getRandomFloat(0,1)*sqrChaos;
+
+  var instr = new Instrument({})
+  instr.setDistortion(distortion)
+  
+  if(trig){
+    instr.trig = trig
+    instr.kickRelease = getRandomFloat(0.1,2)+sqrChaos*0.5
+    instr.snareRelease = getRandomFloat(0.1,0.5+sqrChaos*0.5)
+    instr.hihatRelease = getRandomFloat(0.1,0.3+sqrChaos*0.5)
+    return instr
+  }
+
+  instr.setEnvelope(peakLevel,sustainLevel,attack,decay,release) 
+  instr.setFilter(filterType,filterFreq,filterDetune,Q,gain) 
+  instr.setNoises({type:noiseType,filterType:noiseFilterType,cutoff:noiseFilterCutoff,volume:noiseFilterVolume})
+  if(limit)
+    instr.createLimiter()
+  for(var i = 0;i<nbOsc;i++){
+    var wave = getRandomWave();
+    //beautiful
+    var detune = getRandomInt(-baseDetune - sqrChaos*sqrChaos*sqrChaos*sqrChaos*10,sqrChaos*sqrChaos*sqrChaos*sqrChaos*10 + baseDetune)
+    instr.setOscillators({wave:wave,detune:detune})
+  }
+  
+  return instr
+}
 //Generates sequence of notes based on random params
 function randomSequence(scale,baseLength,short){
-  var length = Math.max(getRandomLength(baseLength,short) + Math.floor(sqrChaos*getRandomInt(-baseLength/2,baseLength*2)),1)
+  var length = Math.max(getRandomLength(baseLength,short) + Math.floor(sqrChaos*sqrChaos*sqrChaos*sqrChaos*getRandomInt(-baseLength/2,baseLength*2)),1)
 
   //nb notes in the sequence. 1 = 1 note per step, 0 = no notes
   var density = getRandomFloat(0.1,1)
@@ -348,6 +502,61 @@ function randomSequence(scale,baseLength,short){
   var chord = rand()<chordProba+sqrChaos/4? true : false
   return generateSequence(scale,length,density,coherence,durationSkew,chord)
 }
+//Generate 3 random commands: kick/snare/hihat and adds them to the command list
+function randomDrum(baseLength,commandList){
+  var scale = ['A4']
+
+  var kick = randomInstrument('kick') 
+  var kickSequence = randomSequence(scale,baseLength,true)
+  var kickCommand = new Command(kick,kickSequence,'Kick',scale)
+  commandList.push(kickCommand)
+
+  var snare = randomInstrument('snare') 
+  var snareSeq = randomSequence(scale,baseLength,true)
+  var snareCommand = new Command(snare,snareSeq,'Snare',scale)
+  commandList.push(snareCommand)
+
+  var hihat = randomInstrument('hihat') 
+  var hihatSeq = randomSequence(scale,baseLength,true)
+  var hihatCommand = new Command(hihat,hihatSeq,'Hihat',scale)
+  commandList.push(hihatCommand)
+}
+//Display characteristics of the random song and add a mute command
+function displayParams(){
+  $('#summary').empty()
+  $('#summary').append('<b>Root : </b>' +  root + '</br>')
+  $('#summary').append('<b>Scale/Mode : </b>' +  mode + '</br>')
+  $('#pauseDiv').empty()
+  $('#pauseDiv').append('<button id="pause" class="btn btn-default" onClick="pause()">Pause</button>')
+
+  $('#instruments').empty()
+  commandList.forEach(function(c){
+    $('#instruments').append(c.display())
+    if(c.muted)
+      $('#' + c.name + '').prop('checked', false);
+    else
+       $('#' + c.name + '').prop('checked', true);
+    $('#' + c.name + '').click(function(){
+      var self = $(this)
+      if(self.is(':checked')){
+        c.muted = false
+      }
+      else{
+        c.muted = true
+      }
+    })
+
+    $('#' + c.name + 'ChangeSequence').click(function(){
+      c.changeSequence(true)
+    })
+    $('#' + c.name + 'ChangeInstrument').click(function(){
+      c.changeInstrument(true)
+    })
+  })
+}
+
+
+
 //Returns a random fraction of the baseLength
 function getRandomLength(baseLength,short){
   //Returns a power of 2 smaller than the base length
@@ -449,83 +658,6 @@ function skewDuration(skew){
     return noteDurations.slice(l-s,l)
   }
 }
-
-//Generates an instrument based on random params.
-//Trig is a text value (kick/snare/hihat) that tells the instrument to ignore normal playing mode
-function randomInstrument(trig){
-  var limit = false
-  // Arbitrary land
-  // Chose all the params of the random instr generation 
-  var nbOsc = getRandomInt(1,baseOscNumber+sqrChaos*baseOscNumber);
-  var distortion = getRandomFloat(0.0,sqrChaos/10);
-  var peakLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
-  var sustainLevel = getRandomFloat(0.04,0.06+sqrChaos/5);
-  var attack = getRandomFloat(0,1.5+sqrChaos*3);
-  var decay = getRandomFloat(0,1.5+sqrChaos*3);
-  var release = getRandomFloat(0,2+sqrChaos*3);
-
-  var filterType = getRandomFilter();
-  var filterFreq = getRandomInt(200,10000);
-  //highpass has a tendency to lower the volume a lot. We will limit and level later
-  if(filterType == 'highpass'){
-    filterFreq = getRandomInt(200,4000)
-    limit = true;
-  }
-
-  var filterDetune = getRandomInt(-sqrChaos*10,sqrChaos*10);
-  var Q = getRandomFloat(0,1)*sqrChaos;
-  var gain = getRandomFloat(0,1)*sqrChaos;
-
-  var noiseType = getRandomNoise();
-  var noiseFilterType = getRandomFilter()
-  var noiseFilterCutoff = getRandomInt(200,10000);
-  var noiseFilterVolume = getRandomFloat(0,1)*sqrChaos;
-
-  var instr = new Instrument({})
-  instr.setDistortion(distortion)
-  
-  if(trig){
-    instr.trig = trig
-    instr.kickRelease = getRandomFloat(0.1,2)+sqrChaos*0.5
-    instr.snareRelease = getRandomFloat(0.1,0.5+sqrChaos*0.5)
-    instr.hihatRelease = getRandomFloat(0.1,0.3+sqrChaos*0.5)
-    return instr
-  }
-
-  instr.setEnvelope(peakLevel,sustainLevel,attack,decay,release) 
-  instr.setFilter(filterType,filterFreq,filterDetune,Q,gain) 
-  instr.setNoises({type:noiseType,filterType:noiseFilterType,cutoff:noiseFilterCutoff,volume:noiseFilterVolume})
-  if(limit)
-    instr.createLimiter()
-  for(var i = 0;i<nbOsc;i++){
-    var wave = getRandomWave();
-    //beautiful
-    var detune = getRandomInt(-baseDetune - sqrChaos*sqrChaos*sqrChaos*sqrChaos*10,sqrChaos*sqrChaos*sqrChaos*sqrChaos*10 + baseDetune)
-    instr.setOscillators({wave:wave,detune:detune})
-  }
-  
-  return instr
-}
-//Generate 3 random commands: kick/snare/hihat and adds them to the command list
-function randomDrum(baseLength,commandList){
-  var scale = ['A4']
-
-  var kick = randomInstrument('kick') 
-  var kickSequence = randomSequence(scale,baseLength,true)
-  var kickCommand = new Command(kick,kickSequence,'Kick')
-  commandList.push(kickCommand)
-
-  var snare = randomInstrument('snare') 
-  var snareSeq = randomSequence(scale,baseLength,true)
-  var snareCommand = new Command(snare,snareSeq,'Snare')
-  commandList.push(snareCommand)
-
-  var hihat = randomInstrument('hihat') 
-  var hihatSeq = randomSequence(scale,baseLength,true)
-  var hihatCommand = new Command(hihat,hihatSeq,'Hihat')
-  commandList.push(hihatCommand)
-}
-
 //Returns a random scale from the list
 function randomScale(root){
   var x = parseInt(pickRandomProperty(scales))
@@ -612,13 +744,6 @@ function getNeighbourNote(note,scale){
   else
     offset = sign*3
 
-  //if(r<0.3333)
-  //  offset = 0;
-  //else if(r<0.666)
-  //  offset = 1
-  //else
-  //  offset = -1
-
   sc = []
 
   Object.keys(scale).forEach(function(key,index) {
@@ -637,6 +762,89 @@ function getNeighbourNote(note,scale){
 }
 
 
+//RESET
+
+//Kill current song and reset params
+function reset(){
+  clearInterval(schedulerTimer);
+
+  resolution = baseResolution
+  cursor = 0
+  nextNoteTime = 0.0
+  max = 1
+
+
+  for(var i = 0;i<commandList.length;i++){
+    commandList[i].kill()
+  }
+
+  commandList = []
+
+  resetContext()
+  initOsc()
+}
+//Closes current context, opens new one and reconnect everything
+function resetContext(){
+  context.close()
+  context = new AudioContext
+
+  mixNode = context.createGain();
+  mixNode.gain.value = 1;
+
+  compressor = context.createDynamicsCompressor()
+  compressor.threshold.value = compressorThreshold;
+  compressor.reduction.value = compressorRatio
+  compressor.attack.value = 0;
+
+  mixNode.connect(compressor);
+  compressor.connect(context.destination);  
+}
+//Resets everything and generates new song
+function resetAndGenerate(){
+  reset()
+  changes = '000000000000';
+  seqChangesInstr1 = 0;
+  seqChangesInstr2 = 0;
+  seqChangesInstr3 = 0;
+  seqChangesKick = 0;
+  seqChangesSnare = 0;
+  seqChangesHihat = 0;
+  changesInstr = '000000';
+  instrChangesInstr1 = 0;
+  instrChangesInstr2 = 0;
+  instrChangesInstr3 = 0;
+  
+  generateDurations();
+  randomSong()
+  applyChanges(changes,changesInstr)
+
+  //computes the nb of steps necessary to loop
+  for(var i = 0;i<commandList.length;i++){
+    max = lcm(max,commandList[i].sequence.length)
+  }
+
+  setInterval(scheduler, 100);
+  
+  play = true;
+}
+
+//Create and add a metronome to the commandList
+function generateMetronome(){
+  var metronomeInstr = new Instrument({})
+  metronomeInstr.setOscillators({wave:'sine',detune:0})
+  metronomeInstr.setEnvelope(0.8,0.3,0.01,0.1,0.0)
+  var MetronomeSequence = []
+  for(var i = 0;i<baseLength*resolution;i++){
+    if(i == 0)
+      MetronomeSequence.push([{note:880, duration:0.005}])
+    else if(i%resolution == 0)
+      MetronomeSequence.push([{note:440, duration:0.005}])
+    else
+      MetronomeSequence.push([{note:220, duration:0.005}])
+  }
+  var metronomeCommand = new Command(metronomeInstr,MetronomeSequence)
+  commandList.push(metronomeCommand)
+}
 
 
 

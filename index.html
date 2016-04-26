@@ -21,7 +21,11 @@
           Max Length: <input id='length' value = '32' type=numberBox size="1" min=1 /></br>
           Chaos: <p id="chaosResult">0</p><input id='chaos' type=range value=0 width="100px" min=0 max=100/></br>
           <button id="generate" class="btn btn-default" onClick="generateSong()">Generate</button></br>
-          <!--<button class='btn btn-default' onClick="pause()">||</button>-->
+        </div>
+        <p class="title">EVOLVE</p>
+        <div id="evolveDiv">
+          Evolve : <input id="evolve" class="btn btn-default" type="checkbox"/></br>
+          Rate: <p id="evolveRateResult">25</p><input id='evolveRate' type=range value=25 width="100px" min=0 max=100/></br>
         </div>
         <p class="title">SEED</p>
         <div id="seedDiv">
@@ -29,7 +33,7 @@
           </br>
           </br>
           </br>
-          <input id='seedInput' type=numberBox size="16" min=1 /></br>
+          <input id='seedInput' type=numberBox size="20" min=1 /></br>
           <button id="loadSeed" class="btn btn-default" onClick="loadSeed()">Load</button></br>
         </div>
         <footer><a href="http://www.github.com/atactionpark/procmusic2">Github</a></footer>
@@ -37,6 +41,8 @@
       <div id="page-content-wrapper">
         <div id='osc'></div>
         <div id='step'></div>
+        <div id='summary'></div>
+        <div id='pauseDiv'></div>
         <div id='instruments'></div>
       </div>
     </div>
