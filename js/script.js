@@ -160,7 +160,7 @@ function generateSeed(){
 }
 //Reads the seed value input and generates a song according to it
 function loadSeed(){
-  var input = $('#seedInput').val()
+  var input = $('#seedInput').val().trim()
   var s =input.split(/-/g)
   changes = (s[5]) || 0
   changes = pad(convertBase(changes,62,10),12)
