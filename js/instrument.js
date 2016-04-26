@@ -1,5 +1,5 @@
 //Instrument: list of oscillators with enveloppe, filter, distortion and noise params
-function Instrument(params){
+function Instrument(){
 	this.context = context;
 	this.oscillators = []
 	this.noises = []

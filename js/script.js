@@ -135,7 +135,7 @@ function getParams(){
    baseLength = parseInt($('#length').val())
    baseResolution = parseInt($('#resolution').val())
    tempo = parseInt($('#tempo').val())
-   chaos = parseFloat($('#chaos').val()/100)
+   chaos = parseInt($('#chaos').val())/100
    //use squared value for calculationsfor slower increase
    sqrChaos = chaos*chaos
 }
@@ -155,7 +155,7 @@ function generateSong(){
 
 //Concatenates all needed params for the seed
 function generateSeed(){
-  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + chaos*100 + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62)
+  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + Math.round(chaos*100) + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62)
   return s;
 }
 //Reads the seed value input and generates a song according to it
@@ -463,7 +463,7 @@ function randomInstrument(trig){
   var noiseFilterCutoff = getRandomInt(200,10000);
   var noiseFilterVolume = getRandomFloat(0,1)*sqrChaos;
 
-  var instr = new Instrument({})
+  var instr = new Instrument()
   instr.setDistortion(distortion)
   
   if(trig){
