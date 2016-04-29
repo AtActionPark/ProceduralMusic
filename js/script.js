@@ -846,5 +846,8 @@ function generateMetronome(){
   commandList.push(metronomeCommand)
 }
 
-
-
+var synth = window.speechSynthesis;
+var utterThis = new SpeechSynthesisUtterance('test');
+utterThis.pitch = 2;
+utterThis.rate = 1;
+synth.speak(utterThis);
