@@ -910,7 +910,7 @@ function playSound(streamBuffer, note) {
 
 
   context.decodeAudioData(streamBuffer, function(audioData) { 
-    //changeParams(audioData,audioData)
+    vocoder.changeParams(audioData,audioData)
   }, function(error) { }); 
 }
 
@@ -928,14 +928,12 @@ function getVoiceBounds(){
   }
   initVocoder()
 }
-
+var vocoder
 function initVocoder(){
-  var vocoder = new Vocoder()
+  vocoder = new Vocoder()
 
-  var buffer = meSpeak.speak('test',{rawdata:'default'});
-  context.decodeAudioData(buffer, function(audioData) { 
-    vocoder.init(context, audioData, audioData)
-  }, function(error) { }); 
+    vocoder.init(context)
+
 }
 
 

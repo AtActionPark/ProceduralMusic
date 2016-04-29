@@ -583,14 +583,10 @@ window.addEventListener('keydown', function(ev) {
     }, false);
 
   // Initialization function for the page.
-Vocoder.prototype.init = function(ctx, carrierB, modulatorB) {
+Vocoder.prototype.init = function(ctx) {
     this.audioContext = ctx;
-    this.carrierBuffer = carrierB;
-    this.modulatorBuffer = modulatorB;
     this.generateVocoderBands(55, 7040, 28);
-    // Set up the vocoder chains
     this.setupVocoderGraph();
-    this.vocode();
   }
 
 Vocoder.prototype.changeParams = function(carrierB, modulatorB){
@@ -598,8 +594,6 @@ Vocoder.prototype.changeParams = function(carrierB, modulatorB){
     this.modulatorBuffer = modulatorB;
     this.vocode();
   }
-
-  // kick out the jams
     
  
 
