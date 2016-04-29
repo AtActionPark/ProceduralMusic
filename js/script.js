@@ -12,6 +12,7 @@
 //60-4-32-0-52.98625-0-0
 //60-4-32-0-25.39188-0-0
 //60-4-32-0-28.44209-4Q-2Bi
+//60-4-32-0-90.11622-0-0
 
 
 // Parameters
@@ -74,6 +75,11 @@ var instrChangesInstr3 = 0;
 
 var evolve = false;
 var evolveProba = 0.25;
+
+
+var phrase
+var phraseSplit;
+var wcounter = -1
 
 
 
@@ -263,6 +269,7 @@ function Command(instrument, sequence, name, scale){
 Command.prototype.play = function(c){
   if(this.cPos>this.sequence.length){
     this.cPos = 0
+
     if(evolve){
       if(getRandomFloat(0,1)<evolveProba){
         console.log('evolve ' + this.name)
@@ -281,12 +288,17 @@ Command.prototype.play = function(c){
       this.sequence[c].forEach(function(n){
         //duration can be a nb in ms or a string ('16th', 'half', ...)
         var dur = typeof(n.duration) == 'number'? n.duration : noteDurations[n.duration]*60.0/tempo
-        self.instrument.play(n.note, nextNoteTime, dur)
+        if(self.instrument)
+          self.instrument.play(n.note, nextNoteTime, dur)
+        else{
+          sing(getNextWord(),n.note,dur)
+        }
       })  
     }
 }
 //kill and empties the command
 Command.prototype.kill = function(){
+  if(this.instrument)
   this.instrument.kill()
   this.sequence = []
 }
@@ -294,7 +306,7 @@ Command.prototype.kill = function(){
 Command.prototype.display = function(){
   var mute = '<input id=' + this.name + ' type=checkbox><label></label> '
   var length = ' : ' + this.sequence.length / resolution + ' steps'
-  var filter = ' - Filter : ' + this.instrument.filter.type + ':' + this.instrument.filter.frequency.value
+  
   var changeSequence = '  <button id=' + this.name + 'ChangeSequence' + ' type=button class="change btn btn-default">Change Seq.</button>';
   var changeInstrument = ''
   if(this.name != 'Kick' && this.name != 'Snare' && this.name != 'Hihat' )
@@ -401,6 +413,7 @@ function applyChanges(changes,changesInstr){
 
 //PROCEDURAL GENERATION
 
+var scaleVoice;
 //generate 3 random commands as well as random drums, and add all to the commandList
 function randomSong(){
   resolution = baseResolution
@@ -428,6 +441,14 @@ function randomSong(){
   var sequence3 = randomSequence(scale3,baseLength)
   var command3 = new Command(instr3,sequence3,'Instr3',scale3)
   commandList.push(command3)
+
+  var voiceInstr = randomInstrument() 
+  scaleVoice = extendScale(scale,4,5)
+  //scaleVoice = {root: rootNotes[root]}
+  var sequenceVoice = randomSequence(scaleVoice,baseLength)
+  sequenceVoice = generateSequence(scaleVoice,baseLength,0.5,1,-0.5,false)
+  var commandVoice = new Command(null,sequenceVoice,'Voice',scaleVoice)
+  commandList.push(commandVoice)
 
   randomDrum(baseLength,commandList)
   displayParams()
@@ -743,7 +764,6 @@ function getNeighbourNote(note,scale){
     offset = sign*2
   else
     offset = sign*3
-
   sc = []
 
   Object.keys(scale).forEach(function(key,index) {
@@ -782,6 +802,9 @@ function reset(){
 
   resetContext()
   initOsc()
+  initVocoder()
+  phrase = generatePhrase()
+  wcounter = -1
 }
 //Closes current context, opens new one and reconnect everything
 function resetContext(){
@@ -846,8 +869,60 @@ function generateMetronome(){
   commandList.push(metronomeCommand)
 }
 
-var synth = window.speechSynthesis;
-var utterThis = new SpeechSynthesisUtterance('test');
-utterThis.pitch = 2;
-utterThis.rate = 1;
-synth.speak(utterThis);
+
+
+
+
+meSpeak.loadConfig("config/mespeak_config.json"); 
+meSpeak.loadVoice('voices/en/en-us.json'); 
+
+
+function getNextWord(){
+  wcounter++
+  if(wcounter>phraseSplit.length-1)
+    wcounter =0
+  return phraseSplit[wcounter]
+}
+
+function sing(text,note,duration){
+  var pitch = 100*note/800;
+  pitch = 100
+  //0-99
+  //default: 50
+  var speed = Math.min(duration*10,200);
+  //speed = 50
+  //80-450
+  //default 175
+
+  console.log(text + ' -  note: ' + note)
+  
+  var buffer = meSpeak.speak(text,{variant:'m2',pitch:pitch,speed:speed,ssml:true,rawdata:'default'});
+  playSound(buffer,note)
+}
+
+function freqToCents(freq){
+  var root = 87
+  return 3986*Math.log10(freq/root)
+}
+
+function playSound(streamBuffer, note) { 
+  context.decodeAudioData(streamBuffer, function(audioData) { 
+    vocoder.changeParams(audioData,audioData,note)
+  }, function(error) { }); 
+}
+
+
+var vocoder
+function initVocoder(){
+  vocoder = new Vocoder()
+  vocoder.init(context)
+}
+
+function generatePhrase(){
+  phrase = "But I must explain to you how all this mistaken idea of denouncing pleasure and praising pain was born and I will give you a complete account of the system, and expound the actual teachings of the great explorer of the truth, the master-builder of human happiness. No one rejects, dislikes, or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure rationally encounter consequences that are extremely painful. Nor again is there anyone who loves or pursues or desires to obtain pain of itself, because it is pain, but because occasionally circumstances occur in which toil and pain can procure him some great pleasure. To take a trivial example, which of us ever undertakes laborious physical exercise, except to obtain some advantage from it? But who has any right to find fault with a man who chooses to enjoy a pleasure that has no annoying consequences, or one who avoids a pain that produces no resultant pleasure? On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee ";
+  phraseSplit = phrase.split(' ')
+}
+
+
+
+
