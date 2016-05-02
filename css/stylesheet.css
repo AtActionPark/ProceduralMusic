@@ -89,3 +89,57 @@ input[type=checkbox]:checked + label{
     position:relative;
     top:-20px;
 }
+
+#lyrics{
+    display:inline;
+    margin-left:20px;
+}
+#voiceDiv{
+    position:relative;
+    margin:10px 0;
+}
+ .input-file-container {
+  position: relative;
+  width: 225px;
+}
+ .input-file-trigger {
+  display: block;
+  padding: 5px 45px;
+  background: #000;
+  color: #fff;
+  font-size: 1em;
+  border:1px solid white;
+  cursor: pointer;
+}
+ .input-file {
+  position: absolute;
+  top: 0; left: 0;
+  width: 225px;
+  padding: 14px 0;
+  opacity: 0;
+  cursor: pointer;
+}
+ 
+ .input-file:hover + .input-file-trigger,
+ .input-file:focus + .input-file-trigger,
+ .input-file-trigger:hover,
+ .input-file-trigger:focus {
+  color: #555;
+}
+ 
+.file-return {
+  margin: 0;
+}
+.file-return:not(:empty) {
+  margin: 1em 0;
+}
+ .file-return {
+  font-style: italic;
+  font-size: .7em;
+  font-weight: bold;
+}
+ .file-return:not(:empty):before {
+  content: "Selected file: ";
+  font-style: normal;
+  font-weight: normal;
+}

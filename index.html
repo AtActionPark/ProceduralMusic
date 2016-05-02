@@ -7,6 +7,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
     <script  src="js/helpers.js"></script>
     <script  src="js/instrument.js"></script>
+    <script  src="js/markov.js"></script>
     <script  src="js/vocoder.js"></script>
     <script  src="js/mespeak.full.js"></script>
     <script  src="js/script.js"></script>
@@ -23,6 +24,12 @@
           Max Length: <input id='length' value = '32' type=numberBox size="1" min=1 /></br>
           Chaos: <p id="chaosResult">0</p><input id='chaos' type=range value=0 width="100px" min=0 max=100/></br>
           <button id="generate" class="btn btn-default" onClick="generateSong()">Generate</button></br>
+          <div id="voiceDiv">Voice : <input id="voice" class="btn btn-default" type="checkbox"/></div>
+          <div class="input-file-container">
+            <input class="input-file" id="my-file" type="file">
+            <label for="my-file" class="input-file-trigger" tabindex="0">Change corpus...</label>
+          </div>
+          <p class="file-return"></p>
         </div>
         <p class="title">EVOLVE</p>
         <div id="evolveDiv">

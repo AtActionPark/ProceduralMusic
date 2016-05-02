@@ -93,7 +93,6 @@ function Vocoder(){
 }
 
 
-
 // this function will algorithmically re-calculate vocoder bands, distributing evenly
 // from startFreq to endFreq, splitting evenly (logarhythmically) into a given numBands.
 // The function places this info into the global vocoderBands and this.numVocoderBands variables.
@@ -126,7 +125,6 @@ Vocoder.prototype.loadNoiseBuffer = function() {  // create a 5-second buffer of
         bufferData[i] = (2*Math.random() - 1);  // -1 to +1
     }
 }
-
 Vocoder.prototype.initBandpassFilters = function() {
   // When this function is called, the carrierNode and modulatorAnalyser 
   // may not already be created.  Create placeholder nodes for them.
@@ -330,22 +328,10 @@ Vocoder.prototype.initBandpassFilters = function() {
     this.audioContext.createPeriodicWave(real, imag) :
     this.audioContext.createWaveTable(real, imag);
   this.loadNoiseBuffer();
-
 }
-
 Vocoder.prototype.setupVocoderGraph = function() {
   this.initBandpassFilters();
 }
-
-
-
-Vocoder.prototype.cancelVocoderUpdates = function() {
-  window.cancelAnimationFrame( this.rafID );
-  this.rafID = null;
-}
-
-
-
 Vocoder.prototype.createCarriersAndPlay = function( output,freq ) {
   var self = this;
   this.carrierSampleNode = this.audioContext.createBufferSource();
@@ -391,9 +377,7 @@ Vocoder.prototype.createCarriersAndPlay = function( output,freq ) {
   this.oscillatorNode.start(0);
   this.noiseNode.start(0);
   this.carrierSampleNode.start(0);
-
 }
-
 Vocoder.prototype.vocode = function(freq) {
   if (this.event) 
     this.event.preventDefault();
@@ -403,10 +387,10 @@ Vocoder.prototype.vocode = function(freq) {
       this.modulatorNode.stop(0);
     this.shutOffCarrier();
     this.vocoding = false;
-    this.cancelVocoderUpdates();
-    if (endOfModulatorTimer)
-      window.clearTimeout(endOfModulatorTimer);
-    endOfModulatorTimer = 0;
+    //this.cancelVocoderUpdates();
+   // if (endOfModulatorTimer)
+    //  window.clearTimeout(endOfModulatorTimer);
+    //endOfModulatorTimer = 0;
     //return;
   } 
   this.createCarriersAndPlay( this.carrierInput,freq );
@@ -423,14 +407,11 @@ Vocoder.prototype.vocode = function(freq) {
   this.modulatorNode.start(0);
 
   
-  endOfModulatorTimer = window.setTimeout( this.vocode, this.modulatorNode.buffer.duration * 1000 + 20 );
+  //endOfModulatorTimer = window.setTimeout( this.vocode, this.modulatorNode.buffer.duration * 1000 + 20 );
 }
-
 Vocoder.prototype.error = function() {
     alert('Stream generation failed.');
 }
-
-
 Vocoder.prototype.convertToMono = function( input ) {
     var splitter = this.audioContext.createChannelSplitter(2);
     var merger = this.audioContext.createChannelMerger(2);
@@ -485,8 +466,6 @@ Vocoder.prototype.createNoiseGate = function( connectTo ) {
     return inputNode;
 }
 
-
-
 // this is ONLY because we have massive feedback without filtering out
 // the top end in live speaker scenarios.
 Vocoder.prototype.createLPInputFilter = function(output) {
@@ -494,30 +473,6 @@ Vocoder.prototype.createLPInputFilter = function(output) {
   this.lpInputFilter.connect(output);
   this.lpInputFilter.frequency.value = 2048;
   return this.lpInputFilter;
-}
-
-var liveInput = false;
-
-Vocoder.prototype.gotStream = function(stream) {
-  // Create an AudioNode from the stream.
-  var mediaStreamSource = this.audioContext.createMediaStreamSource(stream);    
-
-  this.modulatorGain = this.audioContext.createGain();
-  this.modulatorGain.gain.value = this.modulatorGainValue;
-  this.modulatorGain.connect( this.modulatorInput );
-
-  // make sure the source is mono - some sources will be left-side only
-  var monoSource = this.convertToMono( mediaStreamSource );
-
-  //create a noise gate
-  monoSource.connect( this.createLPInputFilter( this.createNoiseGate( this.modulatorGain ) ) );
-
-  this.createCarriersAndPlay( this.carrierInput );
-
-  this.vocoding = true;
-
-
-  window.requestAnimationFrame( updateAnalysers );
 }
 Vocoder.prototype.shutOffCarrier = function() {
   this.oscillatorNode.stop(0);
@@ -533,16 +488,15 @@ Vocoder.prototype.shutOffCarrier = function() {
 
   // Initialization function for the page.
 Vocoder.prototype.init = function(ctx) {
-    this.audioContext = ctx;
-    this.generateVocoderBands(55, 7040, 28);
-    this.setupVocoderGraph();
-  }
-
+  this.audioContext = ctx;
+  this.generateVocoderBands(55, 7040, 28);
+  this.setupVocoderGraph();
+}
 Vocoder.prototype.changeParams = function(carrierB, modulatorB,freq){
-    this.carrierBuffer = carrierB;
-    this.modulatorBuffer = modulatorB;
-    this.vocode(freq);
-  }
+  this.carrierBuffer = carrierB;
+  this.modulatorBuffer = modulatorB;
+  this.vocode(freq);
+}
     
  
 

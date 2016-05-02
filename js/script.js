@@ -7,12 +7,14 @@
 //90-2-32-0-98.39791-0-0
 //60-4-32-0-86.57302-0-0
 //60-4-32-0-98.95139-0-0
-//60-4-32-0-70.62566-0-0
+//60-4-32-0-70.62566-0-0-1
 //60-4-32-0-22.61597-0-0
-//60-4-32-0-52.98625-0-0
+//60-4-32-0-52.98625-0-0-1
 //60-4-32-0-25.39188-0-0
 //60-4-32-0-28.44209-4Q-2Bi
 //60-4-32-0-90.11622-0-0
+//60-4-32-0-25.05833-0-0-1
+//60-4-32-0-13.36134-0-0-1
 
 
 // Parameters
@@ -76,17 +78,20 @@ var instrChangesInstr3 = 0;
 var evolve = false;
 var evolveProba = 0.25;
 
+var voice = false;
 
-var phrase
+var scaleVoice;
+var phrase;
 var phraseSplit;
 var wcounter = -1
-
+var currentWord = '';
 
 
 
 //INIT
 
 $(document).ready(function(){
+   
   initCanvas()
   scope = new Oscilloscope(context, canvas[0]);
   scope.start()
@@ -100,11 +105,37 @@ $(document).ready(function(){
   $('#evolve').change(function(){
     evolve = $(this).is(':checked')
   })
+  $('#voice').change(function(){
+    voice = $(this).is(':checked')
+  })
   var ev = $('#evolveRate')[0]
   ev.addEventListener("input", function() {
       $('#evolveRateResult').html(ev.value)
       evolveProba = ev.value/100;
   }, false); 
+  jQuery.get('corpus.txt', function(data) {
+    corpus = data
+    corpus = corpus.replace(/\s+/g, ' ');
+    createDict();
+  });
+  
+
+  var fileInput  = document.querySelector( ".input-file" ),  
+    button     = document.querySelector( ".input-file-trigger" ),
+    the_return = document.querySelector(".file-return");
+  document.getElementById('my-file').addEventListener('change', readSingleFile, false);
+  button.addEventListener( "click", function( event ) {
+     fileInput.focus();
+     return false;
+  });
+  fileInput.addEventListener( "change", function( event ) {  
+      the_return.innerHTML = this.value;  
+  });
+  meSpeak.loadConfig("config/mespeak_config.json"); 
+  meSpeak.loadVoice('voices/en/en-us.json'); 
+  //meSpeak.loadVoice('voices/fr.json');
+
+  
 })
 //Initialize canvas for drawing oscilloscope
 function initCanvas(){
@@ -161,7 +192,8 @@ function generateSong(){
 
 //Concatenates all needed params for the seed
 function generateSeed(){
-  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + Math.round(chaos*100) + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62)
+  var v = voice == true?1:0
+  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + Math.round(chaos*100) + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62) + '-' + v
   return s;
 }
 //Reads the seed value input and generates a song according to it
@@ -182,6 +214,8 @@ function loadSeed(){
   sqrChaos = chaos*chaos
   $('#chaos').val(chaos*100)
   $('#chaosResult').html(chaos*100)
+  voice = parseInt(s[7])==1?true:false
+  $('#voice').prop('checked', voice);
   seed = parseFloat(s[4]) || 1
   generationSeed = seed
   
@@ -270,7 +304,7 @@ Command.prototype.play = function(c){
   if(this.cPos>this.sequence.length){
     this.cPos = 0
 
-    if(evolve){
+    if(evolve && this.name != 'Voice'){
       if(getRandomFloat(0,1)<evolveProba){
         console.log('evolve ' + this.name)
         this.changeSequence(false)
@@ -307,12 +341,18 @@ Command.prototype.display = function(){
   var mute = '<input id=' + this.name + ' type=checkbox><label></label> '
   var length = ' : ' + this.sequence.length / resolution + ' steps'
   
-  var changeSequence = '  <button id=' + this.name + 'ChangeSequence' + ' type=button class="change btn btn-default">Change Seq.</button>';
+  var changeSequence = ''
+  if(this.name != 'Voice')
+  changeSequence = '  <button id=' + this.name + 'ChangeSequence' + ' type=button class="change btn btn-default">Change Seq.</button>';
   var changeInstrument = ''
-  if(this.name != 'Kick' && this.name != 'Snare' && this.name != 'Hihat' )
+  if(this.name != 'Kick' && this.name != 'Snare' && this.name != 'Hihat' && this.name != 'Voice')
     changeInstrument = '  <button id=' + this.name + 'ChangeInstrument' + ' type=button class="change btn btn-default">Change Instr.</button>';
+  var lyrics = ''
+  if(this.name == 'Voice')
+    lyrics = '<div id="lyrics"></div>';
 
-  return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute  + changeSequence + changeInstrument + '</br></div>'
+
+  return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute  + changeSequence + changeInstrument + lyrics +  '</br></div>'
 }
 //Randomize the command's sequence and updates the seed accordingly
 Command.prototype.changeSequence = function(updateSeed){
@@ -413,7 +453,7 @@ function applyChanges(changes,changesInstr){
 
 //PROCEDURAL GENERATION
 
-var scaleVoice;
+
 //generate 3 random commands as well as random drums, and add all to the commandList
 function randomSong(){
   resolution = baseResolution
@@ -442,15 +482,27 @@ function randomSong(){
   var command3 = new Command(instr3,sequence3,'Instr3',scale3)
   commandList.push(command3)
 
-  var voiceInstr = randomInstrument() 
-  scaleVoice = extendScale(scale,4,5)
-  //scaleVoice = {root: rootNotes[root]}
-  var sequenceVoice = randomSequence(scaleVoice,baseLength)
-  sequenceVoice = generateSequence(scaleVoice,baseLength,0.5,1,-0.5,false)
-  var commandVoice = new Command(null,sequenceVoice,'Voice',scaleVoice)
-  commandList.push(commandVoice)
-
   randomDrum(baseLength,commandList)
+
+  if(voice){
+    phrase = make_post(min_words)
+    phraseSplit = phrase.split(' ')
+
+    var voiceInstr = randomInstrument()
+    var pitch = getRandomFloat(0,1)
+    if(pitch<0.5) 
+      scaleVoice = extendScale(scale,3,4)
+    else 
+      scaleVoice = extendScale(scale,4,5)
+
+    var sequenceVoice = randomSequence(scaleVoice,baseLength)
+    sequenceVoice = generateSequence(scaleVoice,baseLength,0.5,1,-0.6,false,true)
+
+    var commandVoice = new Command(null,sequenceVoice,'Voice',scaleVoice)
+    commandList.push(commandVoice)
+  }
+  
+
   displayParams()
 }
 //Generates an instrument based on random params.
@@ -521,7 +573,7 @@ function randomSequence(scale,baseLength,short){
   var durationSkew = getRandomFloat(-1,1)
   //De we have single notes or 3-notes chords
   var chord = rand()<chordProba+sqrChaos/4? true : false
-  return generateSequence(scale,length,density,coherence,durationSkew,chord)
+  return generateSequence(scale,length,density,coherence,durationSkew,chord,false)
 }
 //Generate 3 random commands: kick/snare/hihat and adds them to the command list
 function randomDrum(baseLength,commandList){
@@ -596,7 +648,7 @@ function getRandomLength(baseLength,short){
   //return getRandomInt(1,baseLength)
 }
 //Returns a sequence of notes/durations or silences based on a lot of weird assumptions
-function generateSequence(scale,length,density,coherence,durationSkew,chord){
+function generateSequence(scale,length,density,coherence,durationSkew,chord,voice){
   var seq = []
 
   var steps = length*resolution
@@ -613,6 +665,8 @@ function generateSequence(scale,length,density,coherence,durationSkew,chord){
       // duration in number of steps
       // duration factor codes for the max duration of a note
       var duration = pickRandomArray(skewDuration(durationSkew))*resolution*durationFactor
+      if(voice)
+        duration = Math.max(duration,2)
       //lazy check
       if (duration<1)
         duration = 1
@@ -803,7 +857,6 @@ function reset(){
   resetContext()
   initOsc()
   initVocoder()
-  phrase = generatePhrase()
   wcounter = -1
 }
 //Closes current context, opens new one and reconnect everything
@@ -850,7 +903,6 @@ function resetAndGenerate(){
   
   play = true;
 }
-
 //Create and add a metronome to the commandList
 function generateMetronome(){
   var metronomeInstr = new Instrument({})
@@ -873,15 +925,16 @@ function generateMetronome(){
 
 
 
-meSpeak.loadConfig("config/mespeak_config.json"); 
-meSpeak.loadVoice('voices/en/en-us.json'); 
+
 
 
 function getNextWord(){
   wcounter++
   if(wcounter>phraseSplit.length-1)
     wcounter =0
-  return phraseSplit[wcounter]
+  currentWord = phraseSplit[wcounter]
+  $('#lyrics').html(currentWord)
+  return currentWord;
 }
 
 function sing(text,note,duration){
@@ -894,7 +947,7 @@ function sing(text,note,duration){
   //80-450
   //default 175
 
-  console.log(text + ' -  note: ' + note)
+  //console.log(text + ' -  note: ' + note)
   
   var buffer = meSpeak.speak(text,{variant:'m2',pitch:pitch,speed:speed,ssml:true,rawdata:'default'});
   playSound(buffer,note)
@@ -918,10 +971,6 @@ function initVocoder(){
   vocoder.init(context)
 }
 
-function generatePhrase(){
-  phrase = "But I must explain to you how all this mistaken idea of denouncing pleasure and praising pain was born and I will give you a complete account of the system, and expound the actual teachings of the great explorer of the truth, the master-builder of human happiness. No one rejects, dislikes, or avoids pleasure itself, because it is pleasure, but because those who do not know how to pursue pleasure rationally encounter consequences that are extremely painful. Nor again is there anyone who loves or pursues or desires to obtain pain of itself, because it is pain, but because occasionally circumstances occur in which toil and pain can procure him some great pleasure. To take a trivial example, which of us ever undertakes laborious physical exercise, except to obtain some advantage from it? But who has any right to find fault with a man who chooses to enjoy a pleasure that has no annoying consequences, or one who avoids a pain that produces no resultant pleasure? On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee ";
-  phraseSplit = phrase.split(' ')
-}
 
 
 
