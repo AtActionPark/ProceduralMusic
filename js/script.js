@@ -113,13 +113,9 @@ $(document).ready(function(){
       $('#evolveRateResult').html(ev.value)
       evolveProba = ev.value/100;
   }, false); 
-  //jQuery.get('corpus.txt', function(data) {
-  //  corpus = data 
-  //});
   corpus = corpus.replace(/\s+/g, ' ');
   createDict();
   
-
   var fileInput  = document.querySelector( ".input-file" ),  
     button     = document.querySelector( ".input-file-trigger" ),
     the_return = document.querySelector(".file-return");
@@ -134,7 +130,7 @@ $(document).ready(function(){
   meSpeak.loadConfig("config/mespeak_config.json"); 
   meSpeak.loadVoice('voices/en/en-us.json'); 
   //meSpeak.loadVoice('voices/fr.json');
-
+  $('#loading').empty()
   
 })
 //Initialize canvas for drawing oscilloscope
