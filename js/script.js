@@ -16,6 +16,8 @@
 //60-4-32-0-25.05833-0-0-1
 //60-4-32-0-13.36134-0-0-1
 
+//60-4-32-0-78.91680-0-0-1
+
 
 // Parameters
 var tempo = 60.0;
@@ -938,8 +940,10 @@ function sing(text,note,duration){
   pitch = 100
   //0-99
   //default: 50
-  var speed = Math.min(duration*10,200);
-  //speed = 50
+  var speed = Math.min(150/duration,200);
+  //console.log(duration)
+  //console.log(speed)
+  speed = 50
   //80-450
   //default 175
 
