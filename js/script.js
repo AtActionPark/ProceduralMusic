@@ -113,11 +113,11 @@ $(document).ready(function(){
       $('#evolveRateResult').html(ev.value)
       evolveProba = ev.value/100;
   }, false); 
-  jQuery.get('corpus.txt', function(data) {
-    corpus = data
-    corpus = corpus.replace(/\s+/g, ' ');
-    createDict();
-  });
+  //jQuery.get('corpus.txt', function(data) {
+  //  corpus = data 
+  //});
+  corpus = corpus.replace(/\s+/g, ' ');
+  createDict();
   
 
   var fileInput  = document.querySelector( ".input-file" ),  

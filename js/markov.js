@@ -20,7 +20,7 @@ function readSingleFile(evt) {
       }
       r.readAsText(f, 'ISO-8859-1');
     } else { 
-        alert("Failed to load file");
+        alert('Failed to load file');
     }
 }
 
