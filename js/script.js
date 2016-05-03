@@ -953,7 +953,7 @@ function sing(text,note,duration){
   var speed = Math.min(150/duration,200);
   speed = 50
   
-  var buffer = meSpeak.speak(text,{variant:'m2',pitch:pitch,speed:speed,ssml:true,rawdata:'default'});
+  var buffer = meSpeak.speak(longify(text,duration),{variant:'m2',pitch:pitch,speed:speed,ssml:true,rawdata:'default'});
   playSound(buffer,note)
 }
 
@@ -967,6 +967,42 @@ function playSound(streamBuffer, note) {
 function initVocoder(){
   vocoder = new Vocoder()
   vocoder.init(context)
+}
+
+function longify(word,duration){
+  var repeat = '';
+  var r = 3
+  word = word.replace(/\./g,' ')
+
+  if(word.slice(-1) == 'a'){
+    repeat = 'a'
+    for(var i = 0;i<r*duration;i++)
+      repeat += 'a'
+  }
+
+  else if(word.slice(-1) == 'i'){
+      repeat = 'i'
+      for(var i = 0;i<r*duration;i++)
+      repeat += 'i'
+  }
+
+  else if(word.slice(-1) == 'o'){
+    repeat = 'o'
+    for(var i = 0;i<r*duration;i++)
+      repeat += 'o'
+  }
+
+  else if(word.slice(-1) == 'u'){
+      repeat = 'u'
+      for(var i = 0;i<r*duration;i++)
+      repeat += 'u'
+  }
+
+
+  
+
+  console.log(word + ' ' + repeat)
+  return word + ' ' + repeat;
 }
 
 
