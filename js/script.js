@@ -63,6 +63,7 @@ var generationSeed;
 var seed;
 var mode;
 var root;
+var vocoder;
 
 //keep track of the number of changes to be able to redo them on load
 var changes = '000000000000';
@@ -118,9 +119,9 @@ $(document).ready(function(){
   corpus = corpus.replace(/\s+/g, ' ');
   createDict();
   
-  var fileInput  = document.querySelector( ".input-file" ),  
-    button     = document.querySelector( ".input-file-trigger" ),
-    the_return = document.querySelector(".file-return");
+  var fileInput  = document.querySelector( ".input-file" ) 
+  var button     = document.querySelector( ".input-file-trigger" )
+  var the_return = document.querySelector(".file-return");
   document.getElementById('my-file').addEventListener('change', readSingleFile, false);
   button.addEventListener( "click", function( event ) {
      fileInput.focus();
@@ -129,9 +130,12 @@ $(document).ready(function(){
   fileInput.addEventListener( "change", function( event ) {  
       the_return.innerHTML = this.value;  
   });
+
+
   meSpeak.loadConfig("config/mespeak_config.json"); 
   meSpeak.loadVoice('voices/en/en-us.json'); 
   //meSpeak.loadVoice('voices/fr.json');
+
   $('#loading').empty()
   
 })
@@ -601,12 +605,15 @@ function displayParams(){
   $('#pauseDiv').append('<button id="pause" class="btn btn-default" onClick="pause()">Pause</button>')
 
   $('#instruments').empty()
+
   commandList.forEach(function(c){
     $('#instruments').append(c.display())
+    //show mute icon
     if(c.muted)
       $('#' + c.name + '').prop('checked', false);
     else
        $('#' + c.name + '').prop('checked', true);
+    //set mute/unmute
     $('#' + c.name + '').click(function(){
       var self = $(this)
       if(self.is(':checked')){
@@ -616,7 +623,6 @@ function displayParams(){
         c.muted = true
       }
     })
-
     $('#' + c.name + 'ChangeSequence').click(function(){
       c.changeSequence(true)
     })
@@ -637,13 +643,12 @@ function getRandomLength(baseLength,short){
   for(var i = 0;i<2;i++){
     length = Math.max(length,getRandomPow2(Math.log(baseLength)/Math.log(2)))
   }
-
+  // short is a  bool used to limit length to a specific duration. Useful to not have weird 120 steps kick pattern for ex
   if(short)
     length = Math.min(length,maxDurationShort)
   
   length = Math.min(length,baseLength)
   return length
-  //return getRandomInt(1,baseLength)
 }
 //Returns a sequence of notes/durations or silences based on a lot of weird assumptions
 function generateSequence(scale,length,density,coherence,durationSkew,chord,voice){
@@ -924,8 +929,9 @@ function generateMetronome(){
 
 
 
+//SING
 
-
+//increments lyrics counter 
 function getNextWord(){
   wcounter++
   if(wcounter>phraseSplit.length-1)
@@ -935,37 +941,29 @@ function getNextWord(){
   return currentWord;
 }
 
+//based on mespeak. Returns an measpeak buffer that will be fed into a web audio node
 function sing(text,note,duration){
+  //mespeak pitch ranges from 0-99 (default 50)
+  //could be altered depending on the note but the results were not convincing. Set value, and post processes with vocoder
   var pitch = 100*note/800;
   pitch = 100
-  //0-99
-  //default: 50
-  var speed = Math.min(150/duration,200);
-  //console.log(duration)
-  //console.log(speed)
-  speed = 50
-  //80-450
-  //default 175
 
-  //console.log(text + ' -  note: ' + note)
+  //mespeak pitch ranges from 80*450 (default 175)
+  //could be altered depending on the duration but the results were not convincing. Set value, need to find a good time stretch algo
+  var speed = Math.min(150/duration,200);
+  speed = 50
   
   var buffer = meSpeak.speak(text,{variant:'m2',pitch:pitch,speed:speed,ssml:true,rawdata:'default'});
   playSound(buffer,note)
 }
 
-function freqToCents(freq){
-  var root = 87
-  return 3986*Math.log10(freq/root)
-}
-
+//changes input buffer and note of the vocoder
 function playSound(streamBuffer, note) { 
   context.decodeAudioData(streamBuffer, function(audioData) { 
     vocoder.changeParams(audioData,audioData,note)
   }, function(error) { }); 
 }
 
-
-var vocoder
 function initVocoder(){
   vocoder = new Vocoder()
   vocoder.init(context)
