@@ -143,3 +143,7 @@ input[type=checkbox]:checked + label{
   font-style: normal;
   font-weight: normal;
 }
+
+#disclaimer{
+  font-size: 10px;
+}

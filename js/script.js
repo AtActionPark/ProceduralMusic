@@ -368,6 +368,8 @@ Command.prototype.changeSequence = function(updateSeed){
   for(var i = 0;i<commandList.length;i++){
     max = lcm(max,commandList[i].sequence.length)
   }
+
+  console.log('changed ' + this.name)
 }
 //Randomize the command's instrument and updates the seed accordingly
 Command.prototype.changeInstrument = function(updateSeed){
@@ -404,7 +406,6 @@ function change(name,type){
 
   changes = pad(seqChangesInstr1,2) + '' + pad(seqChangesInstr2,2)+ '' + pad(seqChangesInstr3,2)+ '' + pad(seqChangesKick,2)+ '' + pad(seqChangesSnare,2)+ '' + pad(seqChangesHihat,2)
   changesInstr = pad(instrChangesInstr1,2) + '' + pad(instrChangesInstr2,2)+ '' + pad(instrChangesInstr3,2)
-
   $('#seed').html(generateSeed())
 }
 //On load, apply the right number of changes
@@ -416,6 +417,8 @@ function applyChanges(changes,changesInstr){
   var seq4Changes = parseInt(c[6]+c[7])
   var seq5Changes = parseInt(c[8]+c[9])
   var seq6Changes = parseInt(c[10]+c[11])
+
+
 
   for(var i = 0;i<seq1Changes;i++){
     commandList[0].changeSequence(false)
@@ -969,6 +972,8 @@ function initVocoder(){
   vocoder.init(context)
 }
 
+//test to artificially increase word duration by stretching the last vowel
+//works pretty well in french (tonic accent on the last syllable), not that much in english
 function longify(word,duration){
   var repeat = '';
   var r = 3
@@ -985,6 +990,13 @@ function longify(word,duration){
       for(var i = 0;i<r*duration;i++)
       repeat += 'i'
   }
+  else if(word.slice(-1) == 'e'){
+    if(word.slice(-2) == 'e' || word.slice(-2) == 'h' ){
+      repeat = 'e'
+      for(var i = 0;i<r*duration;i++)
+      repeat += 'e'
+    }
+  }
 
   else if(word.slice(-1) == 'o'){
     repeat = 'o'
@@ -996,6 +1008,12 @@ function longify(word,duration){
       repeat = 'u'
       for(var i = 0;i<r*duration;i++)
       repeat += 'u'
+  }
+
+  else if(word.slice(-1) == 'y'){
+      repeat = 'e'
+      for(var i = 0;i<r*duration;i++)
+      repeat += 'e'
   }
 
 
