@@ -83,7 +83,6 @@ var currentWord = '';
 //INIT
 
 $(document).ready(function(){
-   
   initCanvas()
   scope = new Oscilloscope(context, canvas[0]);
   scope.start()
@@ -123,10 +122,8 @@ $(document).ready(function(){
 
   meSpeak.loadConfig("config/mespeak_config.json"); 
   meSpeak.loadVoice('voices/en/en-us.json'); 
-  //meSpeak.loadVoice('voices/fr.json');
 
   $('#loading').empty()
-  
 })
 //Initialize canvas for drawing oscilloscope
 function initCanvas(){
@@ -228,7 +225,6 @@ function resetAndLoad(){
   play = true;
 }
 
-
 //SCHEDULER
 
 //Advances the cursor for reading sequences and update display
@@ -245,8 +241,6 @@ function nextNote(){
 }
 //Look at the sequences and play all scheduled notes
 function scheduler(){
-  if(!play)
-    return
   while(nextNoteTime < context.currentTime + scheduleAheadTime){
     commandList.forEach(function(c){
       c.play(cursor)
@@ -258,6 +252,10 @@ function scheduler(){
 //
 function pause(){
   play = !play
+  if(!play)
+  context.suspend();
+else
+  context.resume();
   $('#pause').html(play? 'pause':'play')
 }
 
@@ -318,7 +316,6 @@ Command.prototype.display = function(){
   var lyrics = ''
   if(this.name == 'Voice')
     lyrics = '<div id="lyrics"></div>';
-
 
   return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute   + lyrics +  '</br></div>'
 }
@@ -395,6 +392,8 @@ function randomSong(){
   
 
   displayParams()
+
+  $('#lyrics').html(phrase)
 }
 //Generates an instrument based on random params.
 //Trig is a text value (kick/snare/hihat) that tells the instrument to ignore normal playing mode
@@ -806,7 +805,7 @@ function getNextWord(){
   if(wcounter>phraseSplit.length-1)
     wcounter =0
   currentWord = phraseSplit[wcounter]
-  $('#lyrics').html(currentWord)
+  //$('#lyrics').html(currentWord)
   return currentWord;
 }
 
@@ -881,9 +880,6 @@ function longify(word,duration){
       for(var i = 0;i<r*duration;i++)
       repeat += 'e'
   }
-
-
-  
 
   console.log(word + ' ' + repeat)
   return word + ' ' + repeat;
