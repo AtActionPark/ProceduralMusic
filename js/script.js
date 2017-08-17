@@ -3,21 +3,21 @@
 //fix snare
 
 //EXAMPLE SEEDS
-//60-4-32-0-43.13090-0-0
-//90-2-32-0-98.39791-0-0
-//60-4-32-0-86.57302-0-0
-//60-4-32-0-98.95139-0-0
-//60-4-32-0-70.62566-0-0-1
-//60-4-32-0-22.61597-0-0
-//60-4-32-0-52.98625-0-0-1
-//60-4-32-0-25.39188-0-0
-//60-4-32-0-28.44209-4Q-2Bi
-//60-4-32-0-90.11622-0-0
-//60-4-32-0-25.05833-0-0-1
-//60-4-32-0-13.36134-0-0-1
+//60-4-32-0-43.13090-0
+//90-2-32-0-98.39791-0
+//60-4-32-0-86.57302-0
+//60-4-32-0-98.95139-0
+//60-4-32-0-70.62566-1
+//60-4-32-0-22.61597-0
+//60-4-32-0-52.98625-1
+//60-4-32-0-25.39188-0
+//60-4-32-0-28.44209-0
+//60-4-32-0-90.11622-0
+//60-4-32-0-25.05833-1
+//60-4-32-0-13.36134-1
 
-//60-4-32-0-78.91680-0-0-1
-
+//60-4-32-0-78.91680-1
+'use strict';
 
 // Parameters
 var tempo = 60.0;
@@ -31,8 +31,8 @@ var maxDurationShort = 16;
 var baseDetune = 1;
 var seedPrecision = 5;
 
-var compressorThreshold = -24
-var compressorRatio = 20
+var compressorThreshold = -24;
+var compressorRatio = 20;
 
 //oscilloscope
 var oscWidth = 1000;
@@ -64,19 +64,8 @@ var seed;
 var mode;
 var root;
 var vocoder;
+var compressor;
 
-//keep track of the number of changes to be able to redo them on load
-var changes = '000000000000';
-var seqChangesInstr1 = 0;
-var seqChangesInstr2 = 0;
-var seqChangesInstr3 = 0;
-var seqChangesKick = 0;
-var seqChangesSnare = 0;
-var seqChangesHihat = 0;
-var changesInstr = '000000000000';
-var instrChangesInstr1 = 0;
-var instrChangesInstr2 = 0;
-var instrChangesInstr3 = 0;
 
 var evolve = false;
 var evolveProba = 0.25;
@@ -195,17 +184,14 @@ function generateSong(){
 //Concatenates all needed params for the seed
 function generateSeed(){
   var v = voice == true?1:0
-  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + Math.round(chaos*100) + '-' + generationSeed + '-' + convertBase(changes,10,62)+ '-' + convertBase(changesInstr,10,62) + '-' + v
+  var s = tempo + '-' + baseResolution + '-' + baseLength + '-' + Math.round(chaos*100) + '-' + generationSeed + '-' + v
   return s;
 }
 //Reads the seed value input and generates a song according to it
 function loadSeed(){
   var input = $('#seedInput').val().trim()
   var s =input.split(/-/g)
-  changes = (s[5]) || 0
-  changes = pad(convertBase(changes,62,10),12)
-  changesInstr = (s[6]) || 0
-  changesInstr = pad(convertBase(changesInstr,62,10),6)
+
   tempo = parseInt(s[0]) || 60
   $('#tempo').val(tempo)
   baseResolution = parseInt(s[1]) ||4
@@ -216,23 +202,10 @@ function loadSeed(){
   sqrChaos = chaos*chaos
   $('#chaos').val(chaos*100)
   $('#chaosResult').html(chaos*100)
-  voice = parseInt(s[7])==1?true:false
+  voice = parseInt(s[5])==1?true:false
   $('#voice').prop('checked', voice);
   seed = parseFloat(s[4]) || 1
   generationSeed = seed
-  
-  var c = changes.split('')
-  seqChangesInstr1 = parseInt(c[0]+c[1]);
-  seqChangesInstr2 = parseInt(c[2]+c[3]);
-  seqChangesInstr3 = parseInt(c[4]+c[5]);
-  seqChangesKick = parseInt(c[6]+c[7]);
-  seqChangesSnare = parseInt(c[8]+c[9]);
-  seqChangesHihat = parseInt(c[10]+c[11]);
-
-  var c2 = changesInstr.split('')
-  instrChangesInstr1 = parseInt(c2[0]+c2[1]);
-  instrChangesInstr2 = parseInt(c2[2]+c2[3]);
-  instrChangesInstr3 = parseInt(c2[4]+c2[5]);
   
   
   $('#seed').html(generateSeed())
@@ -244,7 +217,6 @@ function resetAndLoad(){
   reset()
   generateDurations();
   randomSong()
-  applyChanges(changes,changesInstr)
 
   //computes the nb of steps necessary to loop
   for(var i = 0;i<commandList.length;i++){
@@ -308,7 +280,6 @@ Command.prototype.play = function(c){
 
     if(evolve && this.name != 'Voice'){
       if(getRandomFloat(0,1)<evolveProba){
-        console.log('evolve ' + this.name)
         this.changeSequence(false)
       }
     }
@@ -343,18 +314,13 @@ Command.prototype.display = function(){
   var mute = '<input id=' + this.name + ' type=checkbox><label></label> '
   var length = ' : ' + this.sequence.length / resolution + ' steps'
   
-  var changeSequence = ''
-  if(this.name != 'Voice')
-  changeSequence = '  <button id=' + this.name + 'ChangeSequence' + ' type=button class="change btn btn-default">Change Seq.</button>';
-  var changeInstrument = ''
-  if(this.name != 'Kick' && this.name != 'Snare' && this.name != 'Hihat' && this.name != 'Voice')
-    changeInstrument = '  <button id=' + this.name + 'ChangeInstrument' + ' type=button class="change btn btn-default">Change Instr.</button>';
+
   var lyrics = ''
   if(this.name == 'Voice')
     lyrics = '<div id="lyrics"></div>';
 
 
-  return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute  + changeSequence + changeInstrument + lyrics +  '</br></div>'
+  return  '<div class="instrumentDiv" id="' + this.name + 'Div"><b>' + this.name + length + '</b></br>' + mute   + lyrics +  '</br></div>'
 }
 //Randomize the command's sequence and updates the seed accordingly
 Command.prototype.changeSequence = function(updateSeed){
@@ -371,90 +337,10 @@ Command.prototype.changeSequence = function(updateSeed){
 
   console.log('changed ' + this.name)
 }
-//Randomize the command's instrument and updates the seed accordingly
-Command.prototype.changeInstrument = function(updateSeed){
-  this.instrument = randomInstrument()
-  if(updateSeed)
-    change(this.name,'instr')
-  displayParams()
-}
-//increment the change counter and updates the seed
-function change(name,type){
-  if(type == 'seq'){
-    if(name == 'Instr1')
-      seqChangesInstr1++;
-    else if(name == 'Instr2')
-      seqChangesInstr2++;
-    else if(name == 'Instr3')
-      seqChangesInstr3++;
-    else if(name == 'Kick')
-      seqChangesKick++;
-    else if(name == 'Snare')
-      seqChangesSnare++;
-    else if(name == 'Hihat')
-      seqChangesHihat++;
-  }
-  if(type == 'instr'){
-    if(name == 'Instr1')
-      instrChangesInstr1++;
-    else if(name == 'Instr2')
-      instrChangesInstr2++;
-    else if(name == 'Instr3')
-      instrChangesInstr3++;
 
-  }
 
-  changes = pad(seqChangesInstr1,2) + '' + pad(seqChangesInstr2,2)+ '' + pad(seqChangesInstr3,2)+ '' + pad(seqChangesKick,2)+ '' + pad(seqChangesSnare,2)+ '' + pad(seqChangesHihat,2)
-  changesInstr = pad(instrChangesInstr1,2) + '' + pad(instrChangesInstr2,2)+ '' + pad(instrChangesInstr3,2)
-  $('#seed').html(generateSeed())
-}
 //On load, apply the right number of changes
-function applyChanges(changes,changesInstr){
-  var c = changes.split('')
-  var seq1Changes = parseInt(c[0]+c[1])
-  var seq2Changes = parseInt(c[2]+c[3])
-  var seq3Changes = parseInt(c[4]+c[5])
-  var seq4Changes = parseInt(c[6]+c[7])
-  var seq5Changes = parseInt(c[8]+c[9])
-  var seq6Changes = parseInt(c[10]+c[11])
 
-
-
-  for(var i = 0;i<seq1Changes;i++){
-    commandList[0].changeSequence(false)
-  }
-  for(var i = 0;i<seq2Changes;i++){
-    commandList[1].changeSequence(false)
-  }
-  for(var i = 0;i<seq3Changes;i++){
-    commandList[2].changeSequence(false)
-  }
-  for(var i = 0;i<seq4Changes;i++){
-    commandList[3].changeSequence(false)
-  }
-  for(var i = 0;i<seq5Changes;i++){
-    commandList[4].changeSequence(false)
-  }
-  for(var i = 0;i<seq6Changes;i++){
-    commandList[5].changeSequence(false)
-  }
-
-  var c2 = changesInstr.split('')
-  var instr1Changes = parseInt(c2[0]+c2[1])
-  var instr2Changes = parseInt(c2[2]+c2[3])
-  var instr3Changes = parseInt(c2[4]+c2[5])
- 
-
-  for(var i = 0;i<instr1Changes;i++){
-    commandList[0].changeInstrument(false)
-  }
-  for(var i = 0;i<instr2Changes;i++){
-    commandList[1].changeInstrument(false)
-  }
-  for(var i = 0;i<instr3Changes;i++){
-    commandList[2].changeInstrument(false)
-  }
-}
 
 //PROCEDURAL GENERATION
 
@@ -625,12 +511,6 @@ function displayParams(){
       else{
         c.muted = true
       }
-    })
-    $('#' + c.name + 'ChangeSequence').click(function(){
-      c.changeSequence(true)
-    })
-    $('#' + c.name + 'ChangeInstrument').click(function(){
-      c.changeInstrument(true)
     })
   })
 }
@@ -824,7 +704,7 @@ function getNeighbourNote(note,scale){
     offset = sign*2
   else
     offset = sign*3
-  sc = []
+  var sc = []
 
   Object.keys(scale).forEach(function(key,index) {
     sc.push(scale[key])
@@ -875,7 +755,6 @@ function resetContext(){
 
   compressor = context.createDynamicsCompressor()
   compressor.threshold.value = compressorThreshold;
-  compressor.reduction.value = compressorRatio
   compressor.attack.value = 0;
 
   mixNode.connect(compressor);
@@ -884,21 +763,8 @@ function resetContext(){
 //Resets everything and generates new song
 function resetAndGenerate(){
   reset()
-  changes = '000000000000';
-  seqChangesInstr1 = 0;
-  seqChangesInstr2 = 0;
-  seqChangesInstr3 = 0;
-  seqChangesKick = 0;
-  seqChangesSnare = 0;
-  seqChangesHihat = 0;
-  changesInstr = '000000';
-  instrChangesInstr1 = 0;
-  instrChangesInstr2 = 0;
-  instrChangesInstr3 = 0;
-  
   generateDurations();
   randomSong()
-  applyChanges(changes,changesInstr)
 
   //computes the nb of steps necessary to loop
   for(var i = 0;i<commandList.length;i++){
